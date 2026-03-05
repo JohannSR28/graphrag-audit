@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GraphRAG Audit | Hub & Ingestion Intelligent</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;700;800&display=swap");
+
+      :root {
+        --bg: #030303;
+        --text: #f3f4f6;
+        --violet: #9d4edd;
+        --border-color: rgba(255, 255, 255, 0.2);
+        --border: 1px solid var(--border-color);
+        --success: #00ff66;
+        --warning: #ffb800;
+        --info: #00b8ff;
+        --danger: #ff3333;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: var(--bg);
+        color: var(--text);
+        font-family: "Space Grotesk", sans-serif;
+        overflow-x: hidden;
+        min-height: 100vh;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        z-index: -2;
+        pointer-events: none;
+      }
+
+      .ambient-glow {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 40vw;
+        height: 40vh;
+        background: radial-gradient(
+          circle,
+          rgba(157, 78, 221, 0.12) 0%,
+          transparent 70%
+        );
+        filter: blur(60px);
+        z-index: -3;
+        animation: driftGlow 25s ease-in-out infinite;
+        pointer-events: none;
+      }
+
+      @keyframes driftGlow {
+        0% {
+          transform: translate(-10vw, -10vh) scale(1);
+        }
+        50% {
+          transform: translate(80vw, 60vh) scale(0.9);
+        }
+        100% {
+          transform: translate(-10vw, -10vh) scale(1);
+        }
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        border-left: var(--border);
+        border-right: var(--border);
+        min-height: 100vh;
+        padding-bottom: 4rem;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: var(--border);
+        padding: 1.5rem 2rem;
+      }
+      .logo {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 800;
+        font-size: 1.5rem;
+        letter-spacing: -2px;
+      }
+      .user-nav {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      .avatar-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9rem;
+      }
+      .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: var(--border);
+        background: url("https://github.com/identicons/johann.png") center/cover;
+      }
+      .btn-logout {
+        background: transparent;
+        color: #888;
+        border: none;
+        font-family: "JetBrains Mono", monospace;
+        text-decoration: underline;
+        cursor: pointer;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+      }
+      .btn-logout:hover {
+        color: var(--text);
+      }
+
+      .hub-section {
+        padding: 3rem 2rem;
+      }
+      .hub-title {
+        font-size: 2.5rem;
+        text-transform: uppercase;
+        margin-bottom: 2rem;
+        line-height: 1;
+      }
+
+      .search-bar {
+        width: 100%;
+        background: transparent;
+        border: var(--border);
+        padding: 1rem 1.5rem;
+        color: var(--text);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        outline: none;
+      }
+      .search-bar:focus {
+        border-color: var(--violet);
+      }
+
+      .repo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .repo-card {
+        border: var(--border);
+        background: rgba(0, 0, 0, 0.4);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        transition: transform 0.2s;
+        backdrop-filter: blur(10px);
+      }
+      .repo-card:hover {
+        border-color: var(--violet);
+        transform: translateY(-3px);
+      }
+
+      .repo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .repo-name {
+        font-weight: 700;
+        font-size: 1.2rem;
+        word-break: break-all;
+      }
+
+      .badge-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-end;
+      }
+      .badge {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border: var(--border);
+        border-radius: 2px;
+      }
+      .badge.public {
+        color: var(--info);
+        border-color: rgba(0, 184, 255, 0.3);
+        background: rgba(0, 184, 255, 0.05);
+      }
+      .badge.private {
+        color: #a0a0a0;
+      }
+
+      .status-badge {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 2px;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+      }
+      .status-badge.cached {
+        border-color: var(--success);
+        color: var(--success);
+      }
+      .status-badge.syncing {
+        border-color: var(--warning);
+        color: var(--warning);
+      }
+      .status-badge.new {
+        border-color: #666;
+        color: #888;
+      }
+
+      .branch-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        color: #888;
+      }
+      .branch-select {
+        background: #111;
+        color: var(--text);
+        border: var(--border);
+        padding: 0.5rem;
+        font-family: inherit;
+        outline: none;
+      }
+
+      .action-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: auto;
+      }
+
+      .btn-audit {
+        background: var(--text);
+        color: var(--bg);
+        border: 1px solid var(--text);
+        padding: 0.75rem;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 700;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: 0.2s;
+        width: 100%;
+      }
+      .btn-audit:hover {
+        background: var(--violet);
+        color: var(--text);
+        border-color: var(--violet);
+      }
+
+      .btn-secondary {
+        background: transparent;
+        color: #888;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.6rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: 0.2s;
+        width: 100%;
+      }
+      .btn-secondary:hover {
+        color: var(--text);
+        border-color: var(--text);
+      }
+
+      /* --- INGESTION STEPPER --- */
+      #ingestion-view {
+        display: none;
+        padding: 4rem 2rem;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .terminal-box {
+        border: var(--border);
+        background: #050505;
+        padding: 2rem;
+        position: relative;
+      }
+      .terminal-header {
+        position: absolute;
+        top: -12px;
+        left: 1rem;
+        background: var(--bg);
+        padding: 0 1rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        color: var(--violet);
+      }
+
+      .target-info {
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+        font-family: "JetBrains Mono", monospace;
+        border-bottom: var(--border);
+        padding-bottom: 1rem;
+      }
+      .target-id {
+        color: #666;
+        font-size: 0.9rem;
+        display: block;
+        margin-top: 0.5rem;
+      }
+
+      .negotiation-log {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9rem;
+        color: #888;
+        margin-bottom: 2rem;
+        min-height: 60px;
+      }
+      .negotiation-log span {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+      .log-highlight {
+        color: var(--violet);
+      }
+      .log-success {
+        color: var(--success);
+      }
+      .log-warning {
+        color: var(--warning);
+      }
+
+      .steps-container {
+        display: none;
+      }
+
+      .step-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        font-family: "JetBrains Mono", monospace;
+        color: #666;
+      }
+      .step-row.active {
+        color: var(--text);
+      }
+      .step-row.done {
+        color: var(--success);
+      }
+
+      .step-name {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .status-icon {
+        width: 20px;
+        text-align: center;
+        font-weight: bold;
+      }
+
+      .progress-bar-container {
+        flex-grow: 1;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 0 1.5rem;
+        position: relative;
+        overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: var(--violet);
+        transition: width 0.3s linear;
+      }
+      .step-row.done .progress-bar {
+        background: var(--success);
+      }
+
+      .step-pct {
+        width: 45px;
+        text-align: right;
+      }
+
+      .terminal-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 3rem;
+      }
+
+      .btn-cancel {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        padding: 0.6rem 1.2rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: 0.2s;
+        display: none; /* Affiché uniquement pendant l'ingestion */
+      }
+      .btn-cancel:hover {
+        background: var(--danger);
+        color: var(--bg);
+      }
+
+      @keyframes glitch {
+        0% {
+          transform: translate(0);
+        }
+        20% {
+          transform: translate(-2px, 2px);
+        }
+        40% {
+          transform: translate(-2px, -2px);
+        }
+        60% {
+          transform: translate(2px, 2px);
+        }
+        80% {
+          transform: translate(2px, -2px);
+        }
+        100% {
+          transform: translate(0);
+        }
+      }
+      .redirect-msg {
+        display: none;
+        text-align: left;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1rem;
+        color: var(--success);
+        animation: glitch 0.5s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient-glow"></div>
+
+    <div class="container">
+      <header>
+        <div class="logo">GraphRAG_</div>
+        <div class="user-nav">
+          <div class="avatar-group">
+            <div class="avatar"></div>
+            <span>@johann-sourou</span>
+          </div>
+          <button class="btn-logout">Logout</button>
+        </div>
+      </header>
+
+      <div id="repo-view" class="hub-section">
+        <h1 class="hub-title">Select Target.</h1>
+        <input
+          type="text"
+          class="search-bar"
+          placeholder="Rechercher un dépôt..."
+        />
+
+        <div class="repo-grid">
+          <div class="repo-card">
+            <div class="repo-header">
+              <span class="repo-name">facebook/react</span>
+              <div class="badge-group">
+                <span class="badge public">PUBLIC</span>
+                <span class="status-badge cached">À JOUR (a1b2c)</span>
+              </div>
+            </div>
+            <div class="branch-selector">
+              <label>BRANCHE CIBLE</label>
+              <select class="branch-select">
+                <option>main</option>
+              </select>
+            </div>
+            <div class="action-group">
+              <button class="btn-audit" onclick="redirect('audit_react_123')">
+                VOIR L'AUDIT →
+              </button>
+              <button
+                class="btn-secondary"
+                onclick="startAudit('facebook/react', 'main', 'incremental')"
+              >
+                RE-SCANNER ↻
+              </button>
+            </div>
+          </div>
+
+          <div class="repo-card">
+            <div class="repo-header">
+              <span class="repo-name">johann-sourou/GraphRAG-Audit</span>
+              <div class="badge-group">
+                <span class="badge private">PRIVATE</span>
+                <span class="status-badge syncing"
+                  >DÉSYNCHRONISÉ (3 commits)</span
+                >
+              </div>
+            </div>
+            <div class="branch-selector">
+              <label>BRANCHE CIBLE</label>
+              <select class="branch-select">
+                <option>master</option>
+              </select>
+            </div>
+            <div class="action-group">
+              <button
+                class="btn-audit"
+                onclick="
+                  startAudit(
+                    'johann-sourou/GraphRAG-Audit',
+                    'master',
+                    'incremental',
+                  )
+                "
+              >
+                METTRE À JOUR (DELTA) →
+              </button>
+              <button
+                class="btn-secondary"
+                onclick="redirect('audit_graphrag_456')"
+              >
+                VOIR PRÉCÉDENT AUDIT ↗
+              </button>
+            </div>
+          </div>
+
+          <div class="repo-card">
+            <div class="repo-header">
+              <span class="repo-name">vercel/next.js</span>
+              <div class="badge-group">
+                <span class="badge public">PUBLIC</span>
+                <span class="status-badge new">NON AUDITÉ</span>
+              </div>
+            </div>
+            <div class="branch-selector">
+              <label>BRANCHE CIBLE</label>
+              <select class="branch-select">
+                <option>canary</option>
+              </select>
+            </div>
+            <div class="action-group">
+              <button
+                class="btn-audit"
+                onclick="startAudit('vercel/next.js', 'canary', 'new')"
+                style="margin-top: 2rem"
+              >
+                LANCER L'AUDIT →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="ingestion-view">
+        <div class="terminal-box">
+          <div class="terminal-header">PROCESSUS D'INGESTION_</div>
+
+          <div class="target-info">
+            CIBLE: <span id="display-repo" style="color: var(--violet)"></span>
+            <span class="target-id"
+              >AUDIT_ID: <span id="display-id">GÉNÉRATION...</span></span
+            >
+          </div>
+
+          <div class="negotiation-log" id="negotiation-log"></div>
+
+          <div class="steps-container" id="steps-container">
+            <div class="step-row" id="step-1">
+              <div class="step-name">
+                <span class="status-icon">[-]</span>
+                <span id="step-text-1">01_ Clonage du dépôt source</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-1"></div>
+              </div>
+              <span class="step-pct" id="pct-1">0%</span>
+            </div>
+
+            <div class="step-row" id="step-2">
+              <div class="step-name">
+                <span class="status-icon">[-]</span>
+                <span id="step-text-2">02_ Extraction AST (Tree-sitter)</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-2"></div>
+              </div>
+              <span class="step-pct" id="pct-2">0%</span>
+            </div>
+
+            <div class="step-row" id="step-3">
+              <div class="step-name">
+                <span class="status-icon">[-]</span>
+                <span id="step-text-3"
+                  >03_ Génération des vecteurs spatiaux</span
+                >
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-3"></div>
+              </div>
+              <span class="step-pct" id="pct-3">0%</span>
+            </div>
+
+            <div class="step-row" id="step-4">
+              <div class="step-name">
+                <span class="status-icon">[-]</span>
+                <span id="step-text-4">04_ Synthèse architecturale</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-4"></div>
+              </div>
+              <span class="step-pct" id="pct-4">0%</span>
+            </div>
+          </div>
+
+          <div class="terminal-footer">
+            <div class="redirect-msg" id="redirect-msg">
+              COMPLET. REDIRECTION VERS /audit/...
+            </div>
+            <button class="btn-cancel" id="btn-cancel" onclick="cancelAudit()">
+              ✕ Annuler
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let isCancelled = false;
+      let activeIntervals = [];
+
+      function resetUI() {
+        isCancelled = false;
+        activeIntervals.forEach(clearInterval);
+        activeIntervals = [];
+
+        document.getElementById("steps-container").style.display = "none";
+        document.getElementById("redirect-msg").style.display = "none";
+        document.getElementById("btn-cancel").style.display = "none";
+        document.getElementById("negotiation-log").innerHTML = "";
+
+        for (let i = 1; i <= 4; i++) {
+          let row = document.getElementById(`step-${i}`);
+          row.className = "step-row";
+          row.querySelector(".status-icon").innerText = "[-]";
+          document.getElementById(`bar-${i}`).style.transition = "none";
+          document.getElementById(`bar-${i}`).style.width = "0%";
+          document.getElementById(`pct-${i}`).innerText = "0%";
+        }
+      }
+
+      function cancelAudit() {
+        isCancelled = true;
+        activeIntervals.forEach(clearInterval);
+
+        // Retourner à l'écran précédent
+        document.getElementById("ingestion-view").style.display = "none";
+        document.getElementById("repo-view").style.display = "block";
+      }
+
+      function startAudit(repoName, branch, scenario) {
+        resetUI();
+        document.getElementById("repo-view").style.display = "none";
+        document.getElementById("ingestion-view").style.display = "block";
+        document.getElementById("btn-cancel").style.display = "block"; // Affiche le bouton cancel
+
+        const auditId = "req_" + Math.random().toString(36).substr(2, 9);
+        const commitHash = Math.random().toString(16).substr(2, 7);
+
+        document.getElementById("display-repo").innerText =
+          `${repoName} [${branch}]`;
+        document.getElementById("display-id").innerText = auditId;
+
+        const logZone = document.getElementById("negotiation-log");
+
+        if (isCancelled) return;
+
+        setTimeout(() => {
+          if (isCancelled) return;
+          logZone.innerHTML += `<span>> Vérification de l'empreinte GitHub...</span>`;
+          setTimeout(() => {
+            if (isCancelled) return;
+            logZone.innerHTML += `<span>> Cible : <span class="log-highlight">${branch} (Dernier commit : ${commitHash})</span></span>`;
+            setTimeout(() => {
+              if (isCancelled) return;
+              executeScenario(scenario, logZone, auditId);
+            }, 800);
+          }, 800);
+        }, 300);
+      }
+
+      function executeScenario(scenario, logZone, auditId) {
+        if (isCancelled) return;
+        const stepsContainer = document.getElementById("steps-container");
+        stepsContainer.style.display = "block";
+
+        if (scenario === "cached") {
+          logZone.innerHTML += `<span class="log-success">> Empreinte reconnue en base de données vectorielle.</span>`;
+          logZone.innerHTML += `<span class="log-success">> Restauration depuis la mémoire instantanée...</span>`;
+
+          document.getElementById("step-text-1").innerText =
+            "01_ Vérification des droits d'accès";
+          document.getElementById("step-text-2").innerText =
+            "02_ Chargement de l'AST depuis Neo4j";
+          document.getElementById("step-text-3").innerText =
+            "03_ Chargement des vecteurs depuis pgvector";
+          document.getElementById("step-text-4").innerText =
+            "04_ Initialisation du LLM";
+
+          // Cache Hit on n'affiche pas le bouton cancel car c'est instantané
+          document.getElementById("btn-cancel").style.display = "none";
+          flashAllSteps(() => redirect(auditId));
+        } else if (scenario === "incremental") {
+          const filesMod = Math.floor(Math.random() * 8) + 2;
+          logZone.innerHTML += `<span class="log-warning">> Nouveau commit détecté. Calcul du Delta...</span>`;
+
+          document.getElementById("step-text-1").innerText =
+            `01_ Téléchargement du Delta (${filesMod} fichiers modifiés)`;
+          document.getElementById("step-text-2").innerText =
+            `02_ Mise à jour chirurgicale de l'AST local...`;
+          document.getElementById("step-text-3").innerText =
+            `03_ Ré-encodage vectoriel partiel...`;
+          document.getElementById("step-text-4").innerText =
+            "04_ Synthèse architecturale";
+
+          runIngestionSequence(500, 1500, 2000, 500, () => redirect(auditId));
+        } else {
+          logZone.innerHTML += `<span>> Empreinte inconnue. Démarrage de l'ingestion complète...</span>`;
+
+          document.getElementById("step-text-1").innerText =
+            "01_ Clonage du dépôt source complet";
+          document.getElementById("step-text-2").innerText =
+            "02_ Extraction AST globale (Tree-sitter)";
+          document.getElementById("step-text-3").innerText =
+            "03_ Génération des vecteurs spatiaux massive";
+          document.getElementById("step-text-4").innerText =
+            "04_ Synthèse architecturale globale";
+
+          runIngestionSequence(1000, 3000, 4000, 1000, () => redirect(auditId));
+        }
+      }
+
+      function flashAllSteps(callback) {
+        for (let i = 1; i <= 4; i++) {
+          let row = document.getElementById(`step-${i}`);
+          row.classList.add("done");
+          row.querySelector(".status-icon").innerText = "[✓]";
+          document.getElementById(`bar-${i}`).style.width = "100%";
+          document.getElementById(`bar-${i}`).style.transition = "none";
+          document.getElementById(`pct-${i}`).innerText = "100%";
+        }
+        if (!isCancelled) setTimeout(callback, 800);
+      }
+
+      function animateStep(stepNum, duration, callback) {
+        if (isCancelled) return;
+        const row = document.getElementById(`step-${stepNum}`);
+        const bar = document.getElementById(`bar-${stepNum}`);
+        const pct = document.getElementById(`pct-${stepNum}`);
+        const icon = row.querySelector(".status-icon");
+
+        bar.style.transition = "width 0.3s linear";
+        row.classList.add("active");
+        icon.innerText = "[~]";
+
+        let progress = 0;
+        const intervalTime = 50;
+        const stepIncrement = 100 / (duration / intervalTime);
+
+        const interval = setInterval(() => {
+          if (isCancelled) {
+            clearInterval(interval);
+            return;
+          }
+
+          progress += stepIncrement;
+          if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            row.classList.remove("active");
+            row.classList.add("done");
+            icon.innerText = "[✓]";
+            bar.style.width = "100%";
+            pct.innerText = "100%";
+            if (callback && !isCancelled) setTimeout(callback, 200);
+          } else {
+            bar.style.width = `${progress}%`;
+            pct.innerText = `${Math.floor(progress)}%`;
+          }
+        }, intervalTime);
+
+        activeIntervals.push(interval);
+      }
+
+      function runIngestionSequence(t1, t2, t3, t4, callback) {
+        if (isCancelled) return;
+        animateStep(1, t1, () => {
+          animateStep(2, t2, () => {
+            animateStep(3, t3, () => {
+              animateStep(4, t4, callback);
+            });
+          });
+        });
+      }
+
+      function redirect(auditId) {
+        if (isCancelled) return;
+        document.getElementById("redirect-msg").style.display = "block";
+        document.getElementById("btn-cancel").style.display = "none";
+        setTimeout(() => {
+          if (!isCancelled) {
+            alert("Simulation de router.push('/audit/" + auditId + "') !");
+            resetUI();
+            document.getElementById("ingestion-view").style.display = "none";
+            document.getElementById("repo-view").style.display = "block";
+          }
+        }, 1500);
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GraphRAG Audit | Rapport d'Architecture</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;700;800&display=swap");
+
+      :root {
+        --bg: #030303;
+        --bg-panel: #0a0a0a;
+        --text: #f3f4f6;
+        --violet: #9d4edd;
+        --border-color: rgba(255, 255, 255, 0.15);
+        --border: 1px solid var(--border-color);
+        --danger: #ff3333;
+        --warning: #ffb800;
+        --success: #00ff66;
+        --info: #00b8ff;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: var(--bg);
+        color: var(--text);
+        font-family: "Space Grotesk", sans-serif;
+        overflow: hidden; /* Empêche le scroll global, on scrolle par panel */
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Fond Grille Subtil */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 40px 40px;
+        z-index: -2;
+        pointer-events: none;
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--violet);
+      }
+
+      /* --- HEADER (Top Bar) --- */
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: var(--border);
+        padding: 0.75rem 2rem;
+        background: var(--bg);
+        height: 60px;
+        flex-shrink: 0;
+      }
+      .logo {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 800;
+        font-size: 1.2rem;
+      }
+      .header-meta {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.85rem;
+      }
+      .meta-repo {
+        color: var(--violet);
+      }
+      .meta-score {
+        border: 1px solid var(--success);
+        color: var(--success);
+        padding: 0.2rem 0.6rem;
+        border-radius: 2px;
+      }
+      .btn-exit {
+        background: transparent;
+        color: #888;
+        border: 1px solid #888;
+        padding: 0.3rem 1rem;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+      }
+      .btn-exit:hover {
+        color: var(--text);
+        border-color: var(--text);
+      }
+
+      /* --- 3-COLUMN LAYOUT --- */
+      .app-layout {
+        display: grid;
+        grid-template-columns: 260px 1fr 380px;
+        height: calc(100vh - 60px);
+        width: 100%;
+      }
+
+      /* --- LEFT COL: SIDEBAR NAV --- */
+      .sidebar {
+        border-right: var(--border);
+        background: var(--bg-panel);
+        padding: 1.5rem 0;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+      }
+      .nav-section-title {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.7rem;
+        color: #666;
+        padding: 0 1.5rem;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        border-left: 2px solid transparent;
+        transition: 0.2s;
+        font-size: 0.9rem;
+      }
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .nav-item.active {
+        border-left-color: var(--violet);
+        background: rgba(157, 78, 221, 0.05);
+        font-weight: 700;
+        color: var(--violet);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .dot-critical {
+        background-color: var(--danger);
+        box-shadow: 0 0 8px var(--danger);
+      }
+      .dot-warning {
+        background-color: var(--warning);
+        box-shadow: 0 0 8px var(--warning);
+      }
+      .dot-info {
+        background-color: var(--info);
+      }
+      .dot-success {
+        background-color: var(--success);
+      }
+
+      /* --- MIDDLE COL: CONTENT AREA --- */
+      .content-area {
+        padding: 3rem;
+        overflow-y: auto;
+        background: transparent;
+      }
+
+      /* Score Header */
+      .score-header {
+        border-bottom: var(--border);
+        padding-bottom: 2rem;
+        margin-bottom: 2rem;
+      }
+      .score-header h1 {
+        font-size: 2.5rem;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .category-status-badge {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9rem;
+        padding: 0.3rem 0.8rem;
+        border: 1px solid;
+        border-radius: 2px;
+        text-transform: uppercase;
+      }
+      .summary-text {
+        font-size: 1.1rem;
+        color: #a0a0a0;
+        max-width: 800px;
+        line-height: 1.6;
+      }
+
+      /* Finding Card */
+      .finding-card {
+        border: var(--border);
+        background: var(--bg-panel);
+        margin-bottom: 2rem;
+        display: flex;
+        flex-direction: column;
+      }
+      .finding-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: var(--border);
+        background: rgba(0, 0, 0, 0.5);
+      }
+      .finding-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .severity-badge {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        text-transform: uppercase;
+        border-radius: 2px;
+      }
+      .sev-high {
+        background: rgba(255, 51, 51, 0.1);
+        color: var(--danger);
+        border: 1px solid var(--danger);
+      }
+      .sev-medium {
+        background: rgba(255, 184, 0, 0.1);
+        color: var(--warning);
+        border: 1px solid var(--warning);
+      }
+
+      .finding-body {
+        padding: 1.5rem;
+      }
+      .finding-meta {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        color: #888;
+        margin-bottom: 1rem;
+      }
+
+      /* Code Snippet Viewer */
+      .code-snippet {
+        background: #000;
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 1rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.85rem;
+        color: #e5e5e5;
+        overflow-x: auto;
+        margin-bottom: 1.5rem;
+        white-space: pre-wrap;
+      }
+      .code-keyword {
+        color: var(--violet);
+      }
+      .code-string {
+        color: var(--success);
+      }
+      .code-comment {
+        color: #666;
+        font-style: italic;
+      }
+
+      .recommendation {
+        border-left: 3px solid var(--violet);
+        padding-left: 1rem;
+        background: rgba(157, 78, 221, 0.05);
+        padding: 1rem;
+      }
+      .rec-title {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        color: var(--violet);
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+      }
+
+      /* --- RIGHT COL: GRAPHRAG CHAT --- */
+      .chat-panel {
+        border-left: var(--border);
+        background: var(--bg-panel);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .chat-header {
+        padding: 1rem 1.5rem;
+        border-bottom: var(--border);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-transform: uppercase;
+        color: var(--violet);
+      }
+      .chat-messages {
+        flex-grow: 1;
+        padding: 1.5rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      .msg {
+        max-width: 90%;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      .msg.ai {
+        align-self: flex-start;
+      }
+      .msg.user {
+        align-self: flex-end;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border: var(--border);
+        border-radius: 4px;
+      }
+      .ai-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.7rem;
+        color: var(--violet);
+        margin-bottom: 0.4rem;
+        display: block;
+      }
+
+      .chat-input-area {
+        padding: 1.5rem;
+        border-top: var(--border);
+        background: #000;
+      }
+      .chat-input-wrapper {
+        display: flex;
+        border: var(--border);
+        background: var(--bg);
+        transition: 0.2s;
+      }
+      .chat-input-wrapper:focus-within {
+        border-color: var(--violet);
+      }
+      .chat-input {
+        flex-grow: 1;
+        background: transparent;
+        border: none;
+        color: var(--text);
+        padding: 1rem;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 0.9rem;
+        resize: none;
+        outline: none;
+      }
+      .btn-send {
+        background: transparent;
+        border: none;
+        border-left: var(--border);
+        padding: 0 1rem;
+        color: var(--violet);
+        cursor: pointer;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: bold;
+      }
+      .btn-send:hover {
+        background: var(--violet);
+        color: var(--bg);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">GraphRAG_Audit</div>
+      <div class="header-meta">
+        <span class="meta-repo">CIBLE: facebook/react</span>
+        <span class="meta-score">GLOBAL SCORE: B+</span>
+        <button class="btn-exit" onclick="window.location.href = '#'">
+          Fermer
+        </button>
+      </div>
+    </header>
+
+    <main class="app-layout">
+      <aside class="sidebar">
+        <div class="nav-section-title">Dossiers d'Audit</div>
+        <div id="nav-container"></div>
+      </aside>
+
+      <section class="content-area" id="content-area"></section>
+
+      <aside class="chat-panel">
+        <div class="chat-header">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+            ></path>
+          </svg>
+          GraphRAG Assistant
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+          <div class="msg ai">
+            <span class="ai-label">SYSTEM</span>
+            Graphe contextuel chargé. Dépôt <code>facebook/react</code> indexé.
+            Que souhaitez-vous analyser ?
+          </div>
+          <div class="msg user">
+            Comment implémenter une nouvelle méthode de rendu sans casser le
+            module Fiber existant ?
+          </div>
+          <div class="msg ai">
+            <span class="ai-label">GRAPHRAG</span>
+            D'après l'AST, le module Fiber a <b>42 dépendances croisées</b>. Si
+            vous ajoutez une méthode, vous devez d'abord implémenter l'interface
+            <code>HostConfig</code> dans <code>src/renderers/</code>. Ne
+            modifiez pas <code>workLoopSync</code> directement, cela créera une
+            régression dans la file d'attente asynchrone.
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <div class="chat-input-wrapper">
+            <input
+              type="text"
+              class="chat-input"
+              placeholder="Interrogez votre architecture..."
+            />
+            <button class="btn-send">_></button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <script>
+      // 1. LE CONTRAT DE DONNÉES (Ton mock JSON étendu)
+      const mockAuditData = {
+        repoName: "facebook/react",
+        globalScore: "B+",
+        categories: {
+          architecture: {
+            id: "architecture",
+            title: "Architecture",
+            status: "warning",
+            summary:
+              "L'architecture globale est solide (modèle composants), mais de fortes dépendances circulaires ont été détectées au niveau du réconciliateur.",
+            findings: [],
+          },
+          security: {
+            id: "security",
+            title: "Sécurité",
+            status: "critical",
+            summary:
+              "2 vulnérabilités majeures détectées nécessitant une attention immédiate pour éviter les exécutions de scripts arbitraires (XSS).",
+            findings: [
+              {
+                id: "SEC-001",
+                severity: "high",
+                title: "Injection potentielle dans le parser DOM",
+                file: "src/parser/dom.ts",
+                lines: "45-52",
+                codeSnippet:
+                  "const userHTML = dangerouslyGetHTML();\n<span class='code-keyword'>return</span> element.innerHTML = userHTML; <span class='code-comment'>// Vulnérabilité XSS directe</span>",
+                recommendation:
+                  "Évitez l'assignation directe de innerHTML sans assainissement préalable (sanitization). Utilisez DOMPurify ou forcez l'utilisation de React.createElement.",
+              },
+            ],
+          },
+          technicalDebt: {
+            id: "technicalDebt",
+            title: "Dette Technique",
+            status: "info",
+            summary:
+              "La dette technique est concentrée sur 3 fichiers héritages (legacy) qui n'ont pas été refactorisés depuis 4 ans.",
+            findings: [
+              {
+                id: "DEBT-001",
+                severity: "medium",
+                title: "Complexité cognitive extrême (Score: 145)",
+                file: "src/utils/helpers.ts",
+                lines: "112-250",
+                codeSnippet:
+                  "<span class='code-keyword'>export function</span> processQueue(queue) {\n  <span class='code-keyword'>if</span> (queue.length > 0) {\n    <span class='code-keyword'>for</span> (let i = 0; i < queue.length; i++) {\n      <span class='code-keyword'>if</span> (queue[i].priority === 'high') {\n        <span class='code-comment'>// 130 lignes de if/else imbriqués...</span>\n      }\n    }\n  }\n}",
+                recommendation:
+                  "Cette fonction monopolise le fil d'exécution. Refactorisez-la en utilisant le pattern 'Strategy' ou scindez la boucle avec requestIdleCallback pour soulager le Call Stack.",
+              },
+            ],
+          },
+          performance: {
+            id: "performance",
+            title: "Performance",
+            status: "success",
+            summary:
+              "Aucun goulot d'étranglement majeur détecté. La gestion de la mémoire est optimale dans les boucles principales.",
+            findings: [],
+          },
+          maintainability: {
+            id: "maintainability",
+            title: "Maintenabilité",
+            status: "success",
+            summary:
+              "Le code respecte parfaitement les principes SOLID et la typographie TypeScript est stricte à 98%.",
+            findings: [],
+          },
+        },
+      };
+
+      // Configuration des couleurs selon le statut
+      const statusConfig = {
+        critical: {
+          color: "var(--danger)",
+          class: "dot-critical",
+          label: "Critique",
+        },
+        warning: {
+          color: "var(--warning)",
+          class: "dot-warning",
+          label: "Attention",
+        },
+        info: { color: "var(--info)", class: "dot-info", label: "Info" },
+        success: {
+          color: "var(--success)",
+          class: "dot-success",
+          label: "Optimal",
+        },
+      };
+
+      // 2. RENDU DE LA SIDEBAR
+      function renderSidebar() {
+        const container = document.getElementById("nav-container");
+        let html = "";
+
+        // Convertir l'objet en tableau pour boucler
+        Object.values(mockAuditData.categories).forEach((cat, index) => {
+          const isActive = index === 1 ? "active" : ""; // On met Sécurité actif par défaut
+          const dotClass = statusConfig[cat.status].class;
+
+          html += `
+            <div class="nav-item ${isActive}" onclick="selectCategory('${cat.id}', this)">
+              ${cat.title}
+              <div class="status-dot ${dotClass}"></div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+      }
+
+      // 3. RENDU DU CONTENU CENTRAL
+      function renderContent(categoryId) {
+        const data = mockAuditData.categories[categoryId];
+        const container = document.getElementById("content-area");
+        const config = statusConfig[data.status];
+
+        let html = `
+          <div class="score-header">
+            <h1>
+              ${data.title}
+              <span class="category-status-badge" style="color: ${config.color}; border-color: ${config.color};">${config.label}</span>
+            </h1>
+            <p class="summary-text">${data.summary}</p>
+          </div>
+        `;
+
+        if (data.findings.length === 0) {
+          html += `<div style="color: #666; font-family: 'JetBrains Mono'; border: 1px dashed #333; padding: 2rem; text-align: center;">Aucune anomalie détectée dans ce périmètre.</div>`;
+        } else {
+          data.findings.forEach((find) => {
+            const sevClass =
+              find.severity === "high" ? "sev-high" : "sev-medium";
+            html += `
+              <div class="finding-card">
+                <div class="finding-header">
+                  <div class="finding-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    ${find.title}
+                  </div>
+                  <span class="severity-badge ${sevClass}">${find.severity}</span>
+                </div>
+                <div class="finding-body">
+                  <div class="finding-meta">Fichier: ${find.file} | Lignes: ${find.lines}</div>
+                  <div class="code-snippet">${find.codeSnippet}</div>
+                  <div class="recommendation">
+                    <div class="rec-title">Recommandation GraphRAG</div>
+                    ${find.recommendation}
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        container.innerHTML = html;
+      }
+
+      // 4. GESTION DU CLIC
+      function selectCategory(id, element) {
+        // MAJ de la classe active dans la sidebar
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((el) => el.classList.remove("active"));
+        element.classList.add("active");
+
+        // MAJ du contenu
+        renderContent(id);
+      }
+
+      // Initialisation au chargement
+      window.onload = () => {
+        renderSidebar();
+        renderContent("security"); // On charge la sécurité par défaut
+      };
+    </script>
+  </body>
+</html>
