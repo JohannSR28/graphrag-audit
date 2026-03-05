@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GraphRAG-Audit (AstroRAG) 🚀
 
-## Getting Started
+**Analyseur de Dette Technique Architecturale à Haute Fidélité**
 
-First, run the development server:
+GraphRAG-Audit est une plateforme SaaS B2B conçue pour l'ingestion massive et l'analyse structurelle de dépôts de code complexe. Contrairement aux solutions RAG classiques basées uniquement sur la similarité sémantique, ce système utilise un **Graphe de Connaissances Déterministe (DKB)** extrait directement de l'Arbre Syntaxique Abstrait (AST) pour garantir une précision de 100% sur les dépendances logiques.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🏗️ Architecture du Système
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Le projet repose sur 5 piliers architecturaux garantissant une scalabilité de niveau production :
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **API Gateway Asynchrone (FastAPI)** : Gestion des requêtes via la norme ASGI, validation stricte avec Pydantic et découplage total du plan d'exécution.
+2. **Plan d'Exécution Distribué (Celery & Redis)** : Orchestration des tâches lourdes (clonage, parsing) avec gestion de la contre-pression (*backpressure*) et politiques d'idempotence.
+3. **Analyseur Déterministe (Tree-sitter)** : Extraction haute performance de l'AST pour calculer la complexité cognitive et identifier les goulots d'étranglement structurels.
+4. **Moteur GraphRAG Hybride (Neo4j & pgvector)** : 
+   - **Topologie** : Relations de dépendances strictes dans Neo4j (`CALLS`, `INHERITS`).
+   - **Sémantique** : Embeddings vectoriels dans PostgreSQL pour la recherche floue.
+5. **Infrastructure & Conformité** : Isolation totale via Docker et design orienté vers la **Loi 25 (Québec)** pour la protection des données.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ✨ Le "Wow Factor" : DKB vs LLM-KB
 
-## Learn More
+La plupart des implémentations GraphRAG délèguent l'extraction de graphes aux LLM, ce qui est coûteux et imprécis. 
+**AstroRAG** utilise une approche hybride :
+- **Extraction déterministe** via Tree-sitter (Couverture de 100% des fichiers, coût nul).
+- **Synthèse intelligente** via LLM uniquement pour la couche finale de réponse utilisateur.
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Stack Technique
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Backend** : Python 3.11+, FastAPI, Celery
+- **Frontend** : Next.js 14 (App Router), Tailwind CSS, React Flow (Visualisation)
+- **Bases de données** : Neo4j (Graphe), PostgreSQL + pgvector (Vecteurs), Redis (Broker)
+- **Infrastructure** : Docker, GitHub Actions (CI/CD)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚀 Installation Rapide
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Cloner le projet**
+   ```bash
+   git clone [https://github.com/JohannSR28/graphrag-audit.git](https://github.com/JohannSR28/graphrag-audit.git)
+   cd graphrag-audit
