@@ -12,6 +12,7 @@
         --bg-panel: #0a0a0a;
         --text: #f3f4f6;
         --violet: #9d4edd;
+        --violet-light: #c77dff;
         --border-color: rgba(255, 255, 255, 0.15);
         --border: 1px solid var(--border-color);
         --danger: #ff3333;
@@ -20,558 +21,333 @@
         --info: #00b8ff;
       }
 
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
 
       body {
-        background-color: var(--bg);
-        color: var(--text);
+        background-color: var(--bg); color: var(--text);
         font-family: "Space Grotesk", sans-serif;
-        overflow: hidden; /* Empêche le scroll global, on scrolle par panel */
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
+        overflow: hidden; 
+        height: 100vh; display: flex; flex-direction: column;
       }
 
-      /* Fond Grille Subtil */
       body::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
+        content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background-image:
           linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
           linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-        background-size: 40px 40px;
-        z-index: -2;
-        pointer-events: none;
+        background-size: 40px 40px; z-index: -2; pointer-events: none;
       }
 
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
-        width: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: var(--bg);
-      }
-      ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 3px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: var(--violet);
-      }
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: var(--bg); }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--violet); }
 
-      /* --- HEADER (Top Bar) --- */
+      /* --- HEADER --- */
       header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: var(--border);
-        padding: 0.75rem 2rem;
-        background: var(--bg);
-        height: 60px;
-        flex-shrink: 0;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: var(--border); padding: 0.75rem 2rem;
+        background: var(--bg); height: 60px; flex-shrink: 0; z-index: 10;
       }
-      .logo {
-        font-family: "JetBrains Mono", monospace;
-        font-weight: 800;
-        font-size: 1.2rem;
-      }
-      .header-meta {
-        display: flex;
-        align-items: center;
-        gap: 2rem;
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.85rem;
-      }
-      .meta-repo {
-        color: var(--violet);
-      }
-      .meta-score {
-        border: 1px solid var(--success);
-        color: var(--success);
-        padding: 0.2rem 0.6rem;
-        border-radius: 2px;
-      }
-      .btn-exit {
-        background: transparent;
-        color: #888;
-        border: 1px solid #888;
-        padding: 0.3rem 1rem;
-        cursor: pointer;
-        font-family: inherit;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-      }
-      .btn-exit:hover {
-        color: var(--text);
-        border-color: var(--text);
-      }
+      
+      /* LOGO CORRIGÉ SELON TES INSTRUCTIONS */
+      .logo { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 1.5rem; letter-spacing: -2px; }
+      .logo span { color: var(--violet); }
 
-      /* --- 3-COLUMN LAYOUT --- */
+      .header-meta { display: flex; align-items: center; gap: 1.5rem; font-family: "JetBrains Mono", monospace; font-size: 0.85rem; }
+      .meta-repo { color: var(--text); }
+      
+      .meta-score { border: 1px solid var(--success); color: var(--success); padding: 0.2rem 0.6rem; border-radius: 2px; }
+      
+      .btn-exit { background: transparent; color: #888; border: 1px solid #888; padding: 0.3rem 1rem; cursor: pointer; font-family: inherit; font-size: 0.8rem; text-transform: uppercase; transition: 0.2s;}
+      .btn-exit:hover { color: var(--text); border-color: var(--text); background: rgba(255,255,255,0.05); }
+
+      /* --- CUSTOM DROPDOWN (HEADER) --- */
+      .branch-selector { display: flex; align-items: center; gap: 0.5rem; font-family: "JetBrains Mono", monospace; font-size: 0.8rem; color: #888; }
+      .custom-select { position: relative; min-width: 100px; }
+      .select-selected {
+        background-color: rgba(157, 78, 221, 0.05); border: 1px solid rgba(157, 78, 221, 0.3); color: var(--violet-light);
+        padding: 0.2rem 0.6rem; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;
+      }
+      .select-selected:hover { border-color: var(--violet-light); box-shadow: 0 0 8px rgba(157, 78, 221, 0.4); }
+      .select-arrow { width: 12px; height: 12px; transition: transform 0.2s; margin-left: 0.5rem;}
+      .custom-select.open .select-arrow { transform: rotate(180deg); }
+      .select-items {
+        position: absolute; top: 110%; left: 0; right: 0; z-index: 99;
+        background-color: #050505; border: 1px solid var(--violet); border-radius: 4px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5); overflow: hidden; display: none; flex-direction: column;
+      }
+      .select-items.select-show { display: flex; }
+      .select-items div { color: var(--text); padding: 0.5rem 0.8rem; cursor: pointer; transition: 0.2s; border-bottom: 1px solid rgba(255,255,255,0.05); }
+      .select-items div:last-child { border-bottom: none; }
+      .select-items div:hover { background-color: rgba(157, 78, 221, 0.15); color: var(--violet-light); }
+
+      /* --- FLEX LAYOUT --- */
       .app-layout {
-        display: grid;
-        grid-template-columns: 260px 1fr 380px;
-        height: calc(100vh - 60px);
-        width: 100%;
+        display: flex; height: calc(100vh - 60px); width: 100%; position: relative;
       }
 
       /* --- LEFT COL: SIDEBAR NAV --- */
       .sidebar {
-        border-right: var(--border);
-        background: var(--bg-panel);
-        padding: 1.5rem 0;
-        display: flex;
-        flex-direction: column;
-        overflow-y: auto;
+        width: 260px; border-right: var(--border); background: var(--bg-panel);
+        display: flex; flex-direction: column; transition: width 0.3s ease; flex-shrink: 0; overflow: hidden;
       }
-      .nav-section-title {
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.7rem;
-        color: #666;
-        padding: 0 1.5rem;
-        margin-bottom: 1rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-      .nav-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.75rem 1.5rem;
-        cursor: pointer;
-        border-left: 2px solid transparent;
-        transition: 0.2s;
-        font-size: 0.9rem;
-      }
-      .nav-item:hover {
-        background: rgba(255, 255, 255, 0.02);
-      }
-      .nav-item.active {
-        border-left-color: var(--violet);
-        background: rgba(157, 78, 221, 0.05);
-        font-weight: 700;
-        color: var(--violet);
-      }
+      .sidebar.collapsed { width: 0; border-right: none; }
+      
+      .sidebar-inner { padding: 1.5rem 0; width: 260px; } 
+      
+      .sidebar-header-flex { display: flex; justify-content: space-between; align-items: center; padding: 0 1.5rem; margin-bottom: 1rem; }
+      .nav-section-title { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+      
+      .nav-item { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.5rem; cursor: pointer; border-left: 2px solid transparent; transition: 0.2s; font-size: 0.9rem; }
+      .nav-item:hover { background: rgba(255, 255, 255, 0.02); }
+      .nav-item.active { border-left-color: var(--violet); background: rgba(157, 78, 221, 0.05); font-weight: 700; color: var(--violet); }
 
-      .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
+      .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+      .dot-critical { background-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+      .dot-warning { background-color: var(--warning); box-shadow: 0 0 8px var(--warning); }
+      .dot-info { background-color: var(--info); }
+      .dot-success { background-color: var(--success); }
+
+      /* BOUTONS DE CONTRACTION (TOGGLES) */
+      .panel-toggle {
+        background: transparent; border: none; color: #888; cursor: pointer;
+        padding: 0.2rem; display: flex; align-items: center; justify-content: center; transition: 0.2s;
       }
-      .dot-critical {
-        background-color: var(--danger);
-        box-shadow: 0 0 8px var(--danger);
-      }
-      .dot-warning {
-        background-color: var(--warning);
-        box-shadow: 0 0 8px var(--warning);
-      }
-      .dot-info {
-        background-color: var(--info);
-      }
-      .dot-success {
-        background-color: var(--success);
-      }
+      .panel-toggle:hover { color: var(--violet); }
+      
+      /* Bouton réapparition gauche */
+      .toggle-left-absolute { position: absolute; left: 1rem; top: 1rem; z-index: 50; display: none; background: var(--bg-panel); border: var(--border); border-radius: 4px; padding: 0.5rem; color: var(--text); cursor: pointer; transition: 0.2s;}
+      .toggle-left-absolute:hover { border-color: var(--violet); color: var(--violet); }
+      .sidebar.collapsed ~ .toggle-left-absolute { display: block; }
+
+      /* Bouton réapparition droite (CORRIGÉ ET STYLISÉ) */
+      .toggle-right-absolute { position: absolute; right: 1rem; bottom: 1rem; z-index: 50; display: none; background: var(--violet); border: 1px solid var(--violet-light); border-radius: 50%; padding: 0.8rem; color: var(--bg); cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(157, 78, 221, 0.4);}
+      .toggle-right-absolute:hover { transform: scale(1.05); }
+      .chat-panel.collapsed ~ .toggle-right-absolute { display: block; }
 
       /* --- MIDDLE COL: CONTENT AREA --- */
       .content-area {
-        padding: 3rem;
-        overflow-y: auto;
-        background: transparent;
+        flex-grow: 1; padding: 3rem 4rem; overflow-y: auto; background: transparent; scroll-behavior: smooth; position: relative;
       }
 
-      /* Score Header */
-      .score-header {
-        border-bottom: var(--border);
-        padding-bottom: 2rem;
-        margin-bottom: 2rem;
-      }
-      .score-header h1 {
-        font-size: 2.5rem;
-        text-transform: uppercase;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-      }
-      .category-status-badge {
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.9rem;
-        padding: 0.3rem 0.8rem;
-        border: 1px solid;
-        border-radius: 2px;
-        text-transform: uppercase;
-      }
-      .summary-text {
-        font-size: 1.1rem;
-        color: #a0a0a0;
-        max-width: 800px;
-        line-height: 1.6;
-      }
+      .audit-section { padding-top: 2rem; margin-bottom: 4rem; border-top: 1px dashed rgba(255,255,255,0.1); }
+      .audit-section:first-child { border-top: none; padding-top: 0; }
 
-      /* Finding Card */
-      .finding-card {
-        border: var(--border);
-        background: var(--bg-panel);
-        margin-bottom: 2rem;
-        display: flex;
-        flex-direction: column;
-      }
-      .finding-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem 1.5rem;
-        border-bottom: var(--border);
-        background: rgba(0, 0, 0, 0.5);
-      }
-      .finding-title {
-        font-weight: 700;
-        font-size: 1.1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .severity-badge {
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.7rem;
-        padding: 0.2rem 0.5rem;
-        text-transform: uppercase;
-        border-radius: 2px;
-      }
-      .sev-high {
-        background: rgba(255, 51, 51, 0.1);
-        color: var(--danger);
-        border: 1px solid var(--danger);
-      }
-      .sev-medium {
-        background: rgba(255, 184, 0, 0.1);
-        color: var(--warning);
-        border: 1px solid var(--warning);
-      }
+      .score-header { margin-bottom: 2rem; }
+      .score-header h1 { font-size: 2.2rem; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
+      .category-status-badge { font-family: "JetBrains Mono", monospace; font-size: 0.8rem; padding: 0.3rem 0.8rem; border: 1px solid; border-radius: 2px; text-transform: uppercase; }
+      .summary-text { font-size: 1rem; color: #a0a0a0; max-width: 800px; line-height: 1.6; }
 
-      .finding-body {
-        padding: 1.5rem;
-      }
-      .finding-meta {
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.8rem;
-        color: #888;
-        margin-bottom: 1rem;
-      }
+      .finding-card { border: var(--border); background: var(--bg-panel); margin-bottom: 2rem; display: flex; flex-direction: column; }
+      .finding-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: var(--border); background: rgba(0, 0, 0, 0.5); }
+      .finding-title { font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 0.75rem; }
+      .severity-badge { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; padding: 0.2rem 0.5rem; text-transform: uppercase; border-radius: 2px; }
+      .sev-high { background: rgba(255, 51, 51, 0.1); color: var(--danger); border: 1px solid var(--danger); }
+      .sev-medium { background: rgba(255, 184, 0, 0.1); color: var(--warning); border: 1px solid var(--warning); }
+      .finding-body { padding: 1.5rem; }
+      .finding-meta { font-family: "JetBrains Mono", monospace; font-size: 0.8rem; color: #888; margin-bottom: 1rem; }
 
-      /* Code Snippet Viewer */
-      .code-snippet {
-        background: #000;
-        border: 1px solid #333;
-        border-radius: 4px;
-        padding: 1rem;
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.85rem;
-        color: #e5e5e5;
-        overflow-x: auto;
-        margin-bottom: 1.5rem;
-        white-space: pre-wrap;
-      }
-      .code-keyword {
-        color: var(--violet);
-      }
-      .code-string {
-        color: var(--success);
-      }
-      .code-comment {
-        color: #666;
-        font-style: italic;
-      }
+      .code-snippet { background: #000; border: 1px solid #333; border-radius: 4px; padding: 1rem; font-family: "JetBrains Mono", monospace; font-size: 0.85rem; color: #e5e5e5; overflow-x: auto; margin-bottom: 1.5rem; white-space: pre-wrap; }
+      .code-keyword { color: var(--violet); }
+      .code-string { color: var(--success); }
+      .code-comment { color: #666; font-style: italic; }
 
-      .recommendation {
-        border-left: 3px solid var(--violet);
-        padding-left: 1rem;
-        background: rgba(157, 78, 221, 0.05);
-        padding: 1rem;
-      }
-      .rec-title {
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.8rem;
-        color: var(--violet);
-        text-transform: uppercase;
-        margin-bottom: 0.5rem;
-      }
+      .recommendation { border-left: 3px solid var(--violet); padding-left: 1rem; background: rgba(157, 78, 221, 0.05); padding: 1rem; }
+      .rec-title { font-family: "JetBrains Mono", monospace; font-size: 0.8rem; color: var(--violet); text-transform: uppercase; margin-bottom: 0.5rem; }
 
       /* --- RIGHT COL: GRAPHRAG CHAT --- */
       .chat-panel {
-        border-left: var(--border);
-        background: var(--bg-panel);
-        display: flex;
-        flex-direction: column;
-        height: 100%;
+        width: 380px; border-left: var(--border); background: var(--bg-panel);
+        display: flex; flex-direction: column; transition: width 0.3s ease; flex-shrink: 0; overflow: hidden;
       }
-      .chat-header {
-        padding: 1rem 1.5rem;
-        border-bottom: var(--border);
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.9rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        text-transform: uppercase;
-        color: var(--violet);
-      }
-      .chat-messages {
-        flex-grow: 1;
-        padding: 1.5rem;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-      }
-      .msg {
-        max-width: 90%;
-        font-size: 0.9rem;
-        line-height: 1.5;
-      }
-      .msg.ai {
-        align-self: flex-start;
-      }
-      .msg.user {
-        align-self: flex-end;
-        background: rgba(255, 255, 255, 0.05);
-        padding: 1rem;
-        border: var(--border);
-        border-radius: 4px;
-      }
-      .ai-label {
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.7rem;
-        color: var(--violet);
-        margin-bottom: 0.4rem;
-        display: block;
-      }
+      .chat-panel.collapsed { width: 0; border-left: none; }
+      
+      .chat-inner { display: flex; flex-direction: column; width: 380px; height: 100%; }
 
-      .chat-input-area {
-        padding: 1.5rem;
-        border-top: var(--border);
-        background: #000;
-      }
-      .chat-input-wrapper {
-        display: flex;
-        border: var(--border);
-        background: var(--bg);
-        transition: 0.2s;
-      }
-      .chat-input-wrapper:focus-within {
-        border-color: var(--violet);
-      }
-      .chat-input {
-        flex-grow: 1;
-        background: transparent;
-        border: none;
-        color: var(--text);
-        padding: 1rem;
-        font-family: "Space Grotesk", sans-serif;
-        font-size: 0.9rem;
-        resize: none;
-        outline: none;
-      }
-      .btn-send {
-        background: transparent;
-        border: none;
-        border-left: var(--border);
-        padding: 0 1rem;
-        color: var(--violet);
-        cursor: pointer;
-        font-family: "JetBrains Mono", monospace;
-        font-weight: bold;
-      }
-      .btn-send:hover {
-        background: var(--violet);
-        color: var(--bg);
-      }
+      .chat-header { padding: 1rem 1.5rem; border-bottom: var(--border); font-family: "JetBrains Mono", monospace; font-size: 0.9rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; color: var(--violet); }
+      .chat-header-title { display: flex; align-items: center; gap: 0.5rem; }
+
+      .chat-messages { flex-grow: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem; }
+      .msg { max-width: 90%; font-size: 0.9rem; line-height: 1.5; }
+      .msg.ai { align-self: flex-start; }
+      .msg.user { align-self: flex-end; background: rgba(255, 255, 255, 0.05); padding: 1rem; border: var(--border); border-radius: 4px; }
+      .ai-label { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--violet); margin-bottom: 0.4rem; display: block; }
+
+      .chat-input-area { padding: 1.5rem; border-top: var(--border); background: #000; }
+      .chat-input-wrapper { display: flex; border: var(--border); background: var(--bg); transition: 0.2s; border-radius: 4px; overflow: hidden;}
+      .chat-input-wrapper:focus-within { border-color: var(--violet); }
+      .chat-input { flex-grow: 1; background: transparent; border: none; color: var(--text); padding: 1rem; font-family: "Space Grotesk", sans-serif; font-size: 0.9rem; resize: none; outline: none; }
+      .btn-send { background: transparent; border: none; border-left: var(--border); padding: 0 1rem; color: var(--violet); cursor: pointer; font-family: "JetBrains Mono", monospace; font-weight: bold; }
+      .btn-send:hover { background: var(--violet); color: var(--bg); }
     </style>
   </head>
   <body>
     <header>
-      <div class="logo">GraphRAG_Audit</div>
+      <div class="logo">GraphRAG<span>_</span></div>
       <div class="header-meta">
         <span class="meta-repo">CIBLE: facebook/react</span>
+        
+        <div class="branch-selector">
+          <div class="custom-select" onclick="toggleDropdown(this, event)">
+            <div class="select-selected">
+              <span class="select-text">main</span>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="select-items">
+              <div onclick="selectOption(this, event)">main</div>
+              <div onclick="selectOption(this, event)">v18.2.0</div>
+            </div>
+          </div>
+        </div>
+
         <span class="meta-score">GLOBAL SCORE: B+</span>
-        <button class="btn-exit" onclick="window.location.href = '#'">
-          Fermer
-        </button>
+        <button class="btn-exit" onclick="window.location.href = 'dashboard.html'">Fermer</button>
       </div>
     </header>
 
     <main class="app-layout">
-      <aside class="sidebar">
-        <div class="nav-section-title">Dossiers d'Audit</div>
-        <div id="nav-container"></div>
+      
+      <aside class="sidebar" id="left-sidebar">
+        <div class="sidebar-inner">
+          <div class="sidebar-header-flex">
+            <div class="nav-section-title" style="margin:0; padding:0;">Dossiers d'Audit</div>
+            <button class="panel-toggle" onclick="toggleLeftPanel()" title="Réduire le panneau">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+          </div>
+          <div id="nav-container"></div>
+        </div>
       </aside>
+
+      <button class="toggle-left-absolute" onclick="toggleLeftPanel()" title="Ouvrir les dossiers">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
 
       <section class="content-area" id="content-area"></section>
 
-      <aside class="chat-panel">
-        <div class="chat-header">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-            ></path>
-          </svg>
-          GraphRAG Assistant
-        </div>
+      <aside class="chat-panel" id="right-sidebar">
+        <div class="chat-inner">
+          <div class="chat-header">
+            <div class="chat-header-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              GraphRAG Assistant
+            </div>
+            <button class="panel-toggle" onclick="toggleRightPanel()" title="Réduire l'assistant">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
 
-        <div class="chat-messages" id="chat-messages">
-          <div class="msg ai">
-            <span class="ai-label">SYSTEM</span>
-            Graphe contextuel chargé. Dépôt <code>facebook/react</code> indexé.
-            Que souhaitez-vous analyser ?
+          <div class="chat-messages" id="chat-messages">
+            <div class="msg ai">
+              <span class="ai-label">SYSTEM</span>
+              Graphe contextuel chargé. Dépôt <code>facebook/react</code> indexé. Que souhaitez-vous analyser ?
+            </div>
+            <div class="msg user">
+              Comment implémenter une nouvelle méthode de rendu sans casser le module Fiber existant ?
+            </div>
+            <div class="msg ai">
+              <span class="ai-label">GRAPHRAG</span>
+              D'après l'AST, le module Fiber a <b>42 dépendances croisées</b>. Si vous ajoutez une méthode, vous devez d'abord implémenter l'interface <code>HostConfig</code> dans <code>src/renderers/</code>. Ne modifiez pas <code>workLoopSync</code> directement, cela créera une régression.
+            </div>
           </div>
-          <div class="msg user">
-            Comment implémenter une nouvelle méthode de rendu sans casser le
-            module Fiber existant ?
-          </div>
-          <div class="msg ai">
-            <span class="ai-label">GRAPHRAG</span>
-            D'après l'AST, le module Fiber a <b>42 dépendances croisées</b>. Si
-            vous ajoutez une méthode, vous devez d'abord implémenter l'interface
-            <code>HostConfig</code> dans <code>src/renderers/</code>. Ne
-            modifiez pas <code>workLoopSync</code> directement, cela créera une
-            régression dans la file d'attente asynchrone.
-          </div>
-        </div>
 
-        <div class="chat-input-area">
-          <div class="chat-input-wrapper">
-            <input
-              type="text"
-              class="chat-input"
-              placeholder="Interrogez votre architecture..."
-            />
-            <button class="btn-send">_></button>
+          <div class="chat-input-area">
+            <div class="chat-input-wrapper">
+              <input type="text" class="chat-input" placeholder="Interrogez votre architecture..." />
+              <button class="btn-send">_></button>
+            </div>
           </div>
         </div>
       </aside>
+      
+      <button class="toggle-right-absolute" onclick="toggleRightPanel()" title="Ouvrir l'assistant">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </button>
+
     </main>
 
     <script>
-      // 1. LE CONTRAT DE DONNÉES (Ton mock JSON étendu)
+      function toggleLeftPanel() {
+        document.getElementById('left-sidebar').classList.toggle('collapsed');
+      }
+      function toggleRightPanel() {
+        document.getElementById('right-sidebar').classList.toggle('collapsed');
+      }
+
+      function toggleDropdown(element, event) {
+        event.stopPropagation();
+        document.querySelectorAll('.select-items').forEach(el => {
+          if (el !== element.querySelector('.select-items')) el.classList.remove('select-show');
+        });
+        element.querySelector('.select-items').classList.toggle('select-show');
+        element.classList.toggle('open');
+      }
+      function selectOption(optionElement, event) {
+        event.stopPropagation();
+        const customSelect = optionElement.closest('.custom-select');
+        customSelect.querySelector('.select-text').innerText = optionElement.innerText;
+        customSelect.querySelector('.select-items').classList.remove('select-show');
+        customSelect.classList.remove('open');
+      }
+      document.addEventListener('click', () => {
+        document.querySelectorAll('.select-items').forEach(el => el.classList.remove('select-show'));
+        document.querySelectorAll('.custom-select').forEach(el => el.classList.remove('open'));
+      });
+
       const mockAuditData = {
-        repoName: "facebook/react",
-        globalScore: "B+",
         categories: {
-          architecture: {
-            id: "architecture",
-            title: "Architecture",
-            status: "warning",
-            summary:
-              "L'architecture globale est solide (modèle composants), mais de fortes dépendances circulaires ont été détectées au niveau du réconciliateur.",
-            findings: [],
-          },
           security: {
-            id: "security",
-            title: "Sécurité",
-            status: "critical",
-            summary:
-              "2 vulnérabilités majeures détectées nécessitant une attention immédiate pour éviter les exécutions de scripts arbitraires (XSS).",
+            id: "security", title: "Sécurité", status: "critical",
+            summary: "2 vulnérabilités majeures détectées nécessitant une attention immédiate pour éviter les exécutions de scripts arbitraires (XSS).",
             findings: [
-              {
-                id: "SEC-001",
-                severity: "high",
-                title: "Injection potentielle dans le parser DOM",
-                file: "src/parser/dom.ts",
-                lines: "45-52",
-                codeSnippet:
-                  "const userHTML = dangerouslyGetHTML();\n<span class='code-keyword'>return</span> element.innerHTML = userHTML; <span class='code-comment'>// Vulnérabilité XSS directe</span>",
-                recommendation:
-                  "Évitez l'assignation directe de innerHTML sans assainissement préalable (sanitization). Utilisez DOMPurify ou forcez l'utilisation de React.createElement.",
-              },
-            ],
+              { id: "SEC-001", severity: "high", title: "Injection potentielle dans le parser DOM", file: "src/parser/dom.ts", lines: "45-52", codeSnippet: "const userHTML = dangerouslyGetHTML();\n<span class='code-keyword'>return</span> element.innerHTML = userHTML; <span class='code-comment'>// Vulnérabilité XSS directe</span>", recommendation: "Évitez l'assignation directe de innerHTML sans assainissement préalable (sanitization)." }
+            ]
+          },
+          architecture: {
+            id: "architecture", title: "Architecture", status: "warning",
+            summary: "L'architecture globale est solide (modèle composants), mais de fortes dépendances circulaires ont été détectées au niveau du réconciliateur.",
+            findings: []
           },
           technicalDebt: {
-            id: "technicalDebt",
-            title: "Dette Technique",
-            status: "info",
-            summary:
-              "La dette technique est concentrée sur 3 fichiers héritages (legacy) qui n'ont pas été refactorisés depuis 4 ans.",
+            id: "technicalDebt", title: "Dette Technique", status: "info",
+            summary: "La dette technique est concentrée sur 3 fichiers héritages (legacy) qui n'ont pas été refactorisés depuis 4 ans.",
             findings: [
-              {
-                id: "DEBT-001",
-                severity: "medium",
-                title: "Complexité cognitive extrême (Score: 145)",
-                file: "src/utils/helpers.ts",
-                lines: "112-250",
-                codeSnippet:
-                  "<span class='code-keyword'>export function</span> processQueue(queue) {\n  <span class='code-keyword'>if</span> (queue.length > 0) {\n    <span class='code-keyword'>for</span> (let i = 0; i < queue.length; i++) {\n      <span class='code-keyword'>if</span> (queue[i].priority === 'high') {\n        <span class='code-comment'>// 130 lignes de if/else imbriqués...</span>\n      }\n    }\n  }\n}",
-                recommendation:
-                  "Cette fonction monopolise le fil d'exécution. Refactorisez-la en utilisant le pattern 'Strategy' ou scindez la boucle avec requestIdleCallback pour soulager le Call Stack.",
-              },
-            ],
+              { id: "DEBT-001", severity: "medium", title: "Complexité cognitive extrême (Score: 145)", file: "src/utils/helpers.ts", lines: "112-250", codeSnippet: "<span class='code-keyword'>export function</span> processQueue(queue) {\n  <span class='code-keyword'>if</span> (queue.length > 0) {\n    <span class='code-keyword'>for</span> (let i = 0; i < queue.length; i++) {\n      <span class='code-keyword'>if</span> (queue[i].priority === 'high') {\n        <span class='code-comment'>// 130 lignes de if/else imbriqués...</span>\n      }\n    }\n  }\n}", recommendation: "Cette fonction monopolise le fil d'exécution. Refactorisez-la en utilisant le pattern 'Strategy'." }
+            ]
           },
           performance: {
-            id: "performance",
-            title: "Performance",
-            status: "success",
-            summary:
-              "Aucun goulot d'étranglement majeur détecté. La gestion de la mémoire est optimale dans les boucles principales.",
-            findings: [],
+            id: "performance", title: "Performance", status: "success",
+            summary: "Aucun goulot d'étranglement majeur détecté. La gestion de la mémoire est optimale.",
+            findings: []
           },
           maintainability: {
-            id: "maintainability",
-            title: "Maintenabilité",
-            status: "success",
-            summary:
-              "Le code respecte parfaitement les principes SOLID et la typographie TypeScript est stricte à 98%.",
-            findings: [],
-          },
-        },
+            id: "maintainability", title: "Maintenabilité", status: "success",
+            summary: "Le code respecte parfaitement les principes SOLID et le typage TypeScript est strict à 98%.",
+            findings: []
+          }
+        }
       };
 
-      // Configuration des couleurs selon le statut
       const statusConfig = {
-        critical: {
-          color: "var(--danger)",
-          class: "dot-critical",
-          label: "Critique",
-        },
-        warning: {
-          color: "var(--warning)",
-          class: "dot-warning",
-          label: "Attention",
-        },
+        critical: { color: "var(--danger)", class: "dot-critical", label: "Critique" },
+        warning: { color: "var(--warning)", class: "dot-warning", label: "Attention" },
         info: { color: "var(--info)", class: "dot-info", label: "Info" },
-        success: {
-          color: "var(--success)",
-          class: "dot-success",
-          label: "Optimal",
-        },
+        success: { color: "var(--success)", class: "dot-success", label: "Optimal" },
       };
 
-      // 2. RENDU DE LA SIDEBAR
       function renderSidebar() {
         const container = document.getElementById("nav-container");
         let html = "";
-
-        // Convertir l'objet en tableau pour boucler
         Object.values(mockAuditData.categories).forEach((cat, index) => {
-          const isActive = index === 1 ? "active" : ""; // On met Sécurité actif par défaut
+          const isActive = index === 0 ? "active" : "";
           const dotClass = statusConfig[cat.status].class;
-
           html += `
-            <div class="nav-item ${isActive}" onclick="selectCategory('${cat.id}', this)">
+            <div class="nav-item ${isActive}" data-id="${cat.id}" onclick="scrollToCategory('${cat.id}')">
               ${cat.title}
               <div class="status-dot ${dotClass}"></div>
             </div>
@@ -580,69 +356,81 @@
         container.innerHTML = html;
       }
 
-      // 3. RENDU DU CONTENU CENTRAL
-      function renderContent(categoryId) {
-        const data = mockAuditData.categories[categoryId];
+      function renderAllContent() {
         const container = document.getElementById("content-area");
-        const config = statusConfig[data.status];
+        let html = "";
 
-        let html = `
-          <div class="score-header">
-            <h1>
-              ${data.title}
-              <span class="category-status-badge" style="color: ${config.color}; border-color: ${config.color};">${config.label}</span>
-            </h1>
-            <p class="summary-text">${data.summary}</p>
-          </div>
-        `;
+        Object.values(mockAuditData.categories).forEach(data => {
+          const config = statusConfig[data.status];
+          html += `<div id="cat-${data.id}" class="audit-section">
+            <div class="score-header">
+              <h1>${data.title} <span class="category-status-badge" style="color: ${config.color}; border-color: ${config.color};">${config.label}</span></h1>
+              <p class="summary-text">${data.summary}</p>
+            </div>`;
 
-        if (data.findings.length === 0) {
-          html += `<div style="color: #666; font-family: 'JetBrains Mono'; border: 1px dashed #333; padding: 2rem; text-align: center;">Aucune anomalie détectée dans ce périmètre.</div>`;
-        } else {
-          data.findings.forEach((find) => {
-            const sevClass =
-              find.severity === "high" ? "sev-high" : "sev-medium";
-            html += `
-              <div class="finding-card">
-                <div class="finding-header">
-                  <div class="finding-title">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    ${find.title}
+          if (data.findings.length === 0) {
+            html += `<div style="color: #666; font-family: 'JetBrains Mono'; border: 1px dashed #333; padding: 2rem; text-align: center;">Aucune anomalie détectée dans ce périmètre.</div>`;
+          } else {
+            data.findings.forEach(find => {
+              const sevClass = find.severity === "high" ? "sev-high" : "sev-medium";
+              html += `
+                <div class="finding-card">
+                  <div class="finding-header">
+                    <div class="finding-title">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      ${find.title}
+                    </div>
+                    <span class="severity-badge ${sevClass}">${find.severity}</span>
                   </div>
-                  <span class="severity-badge ${sevClass}">${find.severity}</span>
-                </div>
-                <div class="finding-body">
-                  <div class="finding-meta">Fichier: ${find.file} | Lignes: ${find.lines}</div>
-                  <div class="code-snippet">${find.codeSnippet}</div>
-                  <div class="recommendation">
-                    <div class="rec-title">Recommandation GraphRAG</div>
-                    ${find.recommendation}
+                  <div class="finding-body">
+                    <div class="finding-meta">Fichier: ${find.file} | Lignes: ${find.lines}</div>
+                    <div class="code-snippet">${find.codeSnippet}</div>
+                    <div class="recommendation">
+                      <div class="rec-title">Recommandation GraphRAG</div>
+                      ${find.recommendation}
+                    </div>
                   </div>
-                </div>
-              </div>
-            `;
-          });
-        }
-
+                </div>`;
+            });
+          }
+          html += `</div>`;
+        });
         container.innerHTML = html;
       }
 
-      // 4. GESTION DU CLIC
-      function selectCategory(id, element) {
-        // MAJ de la classe active dans la sidebar
-        document
-          .querySelectorAll(".nav-item")
-          .forEach((el) => el.classList.remove("active"));
-        element.classList.add("active");
-
-        // MAJ du contenu
-        renderContent(id);
+      function scrollToCategory(id) {
+        const element = document.getElementById(`cat-${id}`);
+        if(element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       }
 
-      // Initialisation au chargement
+      function setupScrollSpy() {
+        const sections = document.querySelectorAll('.audit-section');
+        const observerOptions = {
+          root: document.getElementById('content-area'),
+          rootMargin: '0px',
+          threshold: 0.3
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const currentId = entry.target.id.replace('cat-', '');
+              document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+              const activeNav = document.querySelector(`.nav-item[data-id="${currentId}"]`);
+              if(activeNav) activeNav.classList.add('active');
+            }
+          });
+        }, observerOptions);
+
+        sections.forEach(section => observer.observe(section));
+      }
+
       window.onload = () => {
         renderSidebar();
-        renderContent("security"); // On charge la sécurité par défaut
+        renderAllContent();
+        setupScrollSpy();
       };
     </script>
   </body>
