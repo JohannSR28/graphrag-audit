@@ -2,7 +2,7 @@
 
 **Analyseur de Dette Technique Architecturale à Haute Fidélité**
 
-GraphRAG-Audit est une plateforme SaaS B2B conçue pour l'ingestion massive et l'analyse structurelle de dépôts de code complexe. Contrairement aux solutions RAG classiques basées uniquement sur la similarité sémantique, ce système utilise un **Graphe de Connaissances Déterministe (DKB)** extrait directement de l'Arbre Syntaxique Abstrait (AST) pour garantir une précision de 100% sur les dépendances logiques.
+Plateforme universelle d'intelligence logicielle utilisant un moteur GraphRAG hybride. Conçue pour démocratiser l'analyse de la dette technique, elle permet à tout développeur — du junior au lead architext — de visualiser la structure complexe de son code via une ingestion asynchrone sécurisée et une extraction déterministe d'AST.
 
 ## 🏗️ Architecture du Système
 
