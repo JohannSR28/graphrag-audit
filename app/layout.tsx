@@ -1,5 +1,7 @@
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+// 1. Ajoute l'import de ton wrapper
+import SessionProviderWrapper from "@/components/SessionProviderWrapper"; 
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-sans",
@@ -23,7 +25,10 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        {children}
+        {/* 2. Englobe les enfants avec le SessionProviderWrapper */}
+        <SessionProviderWrapper>
+          {children}
+        </SessionProviderWrapper>
       </body>
     </html>
   );

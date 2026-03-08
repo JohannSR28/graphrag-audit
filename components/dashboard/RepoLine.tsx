@@ -8,31 +8,61 @@ import BranchSelector from "./BranchSelector";
 
 interface RepoLineProps {
   repo: Repo;
+  accessToken: string;
 }
 
-function statusLabel(repo: Repo): string {
-  if (repo.status === "cached" && repo.lastCommitHash) {
-    return `À JOUR (${repo.lastCommitHash})`;
-  }
-  if (repo.status === "syncing") return "DÉSYNCHRONISÉ";
-  return "NOUVEAU";
-}
-
-export default function RepoLine({ repo }: RepoLineProps) {
+export default function RepoLine({ repo, accessToken }: RepoLineProps) {
   const [selectedBranch, setSelectedBranch] = useState(repo.defaultBranch);
+  const [branches, setBranches] = useState<string[]>(repo.branches);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const router = useRouter();
 
-  const repoId = repo.id;
-  const ingestionHref = `/dashboard/ingestion/${repoId}?branch=${encodeURIComponent(selectedBranch)}`;
-
-  const handleOpenAudit = () => {
-    router.push("/audit/facebook-react");
+  const fetchBranches = async () => {
+    if (hasFetched || isLoadingBranches) return;
+  
+    setHasFetched(true);
+    setIsLoadingBranches(true);
+  
+    try {
+      const res = await fetch(`https://api.github.com/repos/${repo.name}/branches`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+      });
+  
+      console.log("📡 Status GitHub API:", res.status);
+  
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("❌ GitHub API error:", res.status, errorText);
+        return;
+      }
+  
+      const data = await res.json();
+      console.log("✅ Branches reçues:", data.map((b: any) => b.name));
+      setBranches(data.map((b: any) => b.name));
+    } catch (error) {
+      console.error("💥 Erreur réseau:", error);
+    } finally {
+      setIsLoadingBranches(false);
+    }
   };
+
+  const statusLabel = (r: Repo): string => {
+    if (r.status === "cached" && r.lastCommitHash) return `À JOUR (${r.lastCommitHash})`;
+    if (r.status === "syncing") return "DÉSYNCHRONISÉ";
+    return "NOUVEAU";
+  };
+
+  // MODIFICATION : Ajout de &name dans l'URL pour la page d'ingestion
+  const ingestionHref = `/dashboard/ingestion/${repo.id}?branch=${encodeURIComponent(selectedBranch)}&name=${encodeURIComponent(repo.name)}`;
 
   return (
     <div className="grid grid-cols-[2fr_1fr_auto] items-center gap-8 border-b border-[var(--border-color)] px-4 py-6 transition-all hover:border-l-[3px] hover:border-l-[var(--violet)] hover:bg-white/[0.02] max-md:grid-cols-1 max-md:gap-4">
       <div className="flex flex-wrap items-center gap-4">
-        <span className="text-lg font-bold">{repo.name}</span>
+        <span className="text-lg font-bold">{repo.name.split("/").pop()}</span>
         <span
           className={`rounded border px-2 py-0.5 font-mono text-[0.65rem] ${
             repo.visibility === "public"
@@ -47,52 +77,40 @@ export default function RepoLine({ repo }: RepoLineProps) {
             repo.status === "cached"
               ? "text-[var(--success)]"
               : repo.status === "syncing"
-                ? "text-[var(--warning)]"
-                : "text-[#666]"
+              ? "text-[var(--warning)]"
+              : "text-[#666]"
           }`}
         >
           {statusLabel(repo)}
         </span>
       </div>
+
       <BranchSelector
-        branches={repo.branches}
+        branches={branches}
         value={selectedBranch}
         onChange={setSelectedBranch}
+        onOpen={fetchBranches}
+        isLoading={isLoadingBranches}
       />
+
       <div className="flex justify-end gap-4">
-        {repo.status === "cached" ? (
-          <>
-            <Link
-              href={ingestionHref}
-              className="rounded border border-transparent bg-transparent px-4 py-2 font-mono text-xs font-bold uppercase text-[var(--muted-dark)] transition-colors hover:border-white/20 hover:bg-white/5 hover:text-[var(--foreground)]"
-            >
-              RE-SCANNER
-            </Link>
-            <button
-              type="button"
-              onClick={handleOpenAudit}
-              className="rounded border border-[var(--violet-light)] bg-transparent px-4 py-2 font-mono text-xs font-bold uppercase text-[var(--violet-light)] transition-all hover:bg-[var(--violet-light)] hover:text-[var(--background)] hover:shadow-[0_0_10px_var(--violet-glow)]"
-            >
-              VOIR L&apos;AUDIT
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={handleOpenAudit}
-              className="rounded border border-transparent bg-transparent px-4 py-2 font-mono text-xs font-bold uppercase text-[var(--muted-dark)] transition-colors hover:border-white/20 hover:bg-white/5 hover:text-[var(--foreground)]"
-            >
-              VOIR ANCIEN
-            </button>
-            <Link
-              href={ingestionHref}
-              className="rounded border border-[var(--violet-light)] bg-transparent px-4 py-2 font-mono text-xs font-bold uppercase text-[var(--violet-light)] transition-all hover:bg-[var(--violet-light)] hover:text-[var(--background)] hover:shadow-[0_0_10px_var(--violet-glow)]"
-            >
-              METTRE À JOUR
-            </Link>
-          </>
-        )}
+        <Link
+          href={ingestionHref}
+          className={`rounded border px-4 py-2 font-mono text-xs font-bold uppercase transition-all ${
+            repo.status === "cached"
+              ? "border-transparent text-[var(--muted-dark)] hover:bg-white/5"
+              : "border-[var(--violet-light)] text-[var(--violet-light)] hover:bg-[var(--violet-light)] hover:text-black"
+          }`}
+        >
+          {repo.status === "cached" ? "RE-SCANNER" : "METTRE À JOUR"}
+        </Link>
+        <button
+          type="button"
+          onClick={() => router.push(`/audit/${repo.id}`)}
+          className="rounded border border-[var(--violet-light)] bg-transparent px-4 py-2 font-mono text-xs font-bold uppercase text-[var(--violet-light)] transition-all hover:bg-[var(--violet-light)] hover:text-[var(--background)] hover:shadow-[0_0_10px_var(--violet-glow)]"
+        >
+          VOIR L&apos;AUDIT
+        </button>
       </div>
     </div>
   );

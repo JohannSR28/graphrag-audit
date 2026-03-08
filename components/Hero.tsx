@@ -1,4 +1,6 @@
-import Link from "next/link";
+"use client"; // Indispensable pour utiliser onClick et signIn
+
+import { signIn } from "next-auth/react";
 import type { HeroProps } from "./types";
 
 function GitHubIcon() {
@@ -37,13 +39,15 @@ export default function Hero({
       <p className="mb-12 max-w-[500px] border-l-2 border-[var(--violet)] pl-4 font-mono text-base text-[var(--muted)]">
         {description}
       </p>
-      <Link
-        href={cta.href}
+      
+      <button
+        onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
         className="inline-flex items-center justify-center gap-3 border border-[var(--foreground)] bg-[var(--foreground)] px-8 py-4 font-mono text-base font-bold uppercase text-[var(--background)] no-underline transition-all duration-200 hover:-translate-y-1 hover:translate-x-1 hover:border-[var(--violet)] hover:bg-[var(--violet)] hover:text-[var(--foreground)] hover:shadow-[-4px_4px_0px_rgba(255,255,255,0.2)]"
       >
         <GitHubIcon />
         {cta.label}
-      </Link>
+      </button>
+
       {stats && (
         <div className="absolute bottom-0 right-8 hidden border border-[var(--border-color)] border-b-0 bg-[var(--background)] p-4 font-mono md:block">
           <span className="mb-2 block text-[0.7rem] uppercase text-[var(--violet)]">

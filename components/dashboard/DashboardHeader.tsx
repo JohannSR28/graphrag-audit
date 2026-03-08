@@ -1,6 +1,11 @@
 "use client";
 
+import { signOut, useSession } from "next-auth/react";
+
 export default function DashboardHeader() {
+  // 1. Récupération des données de session en temps réel
+  const { data: session } = useSession();
+
   function handleDelete() {
     if (
       window.confirm(
@@ -32,20 +37,23 @@ export default function DashboardHeader() {
           >
             Supprimer le compte
           </button>
+          
           <button
             type="button"
-            onClick={() => window.alert("Déconnexion en cours...")}
+            onClick={() => signOut({ callbackUrl: "/" })}
             className="border-none bg-transparent text-[var(--muted-dark)] transition-colors hover:text-[var(--foreground)]"
           >
             Déconnexion →
           </button>
         </div>
+
         <div className="flex items-center gap-3 border-l border-[var(--border-color)] pl-8 font-mono text-sm">
-          <span>@johann-sourou</span>
+          <span>@{session?.user?.name || "utilisateur"}</span>
+          
           <div
             className="h-8 w-8 shrink-0 rounded-full border border-white/30 bg-cover bg-center"
             style={{
-              backgroundImage: 'url("https://github.com/identicons/johann.png")',
+              backgroundImage: `url("${session?.user?.image || 'https://github.com/identicons/johann.png'}")`,
             }}
             role="img"
             aria-label="Avatar"
