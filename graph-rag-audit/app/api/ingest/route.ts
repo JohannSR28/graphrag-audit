@@ -5,21 +5,19 @@ import { NextResponse } from "next/server";
 import { getServerWorkerUrl } from "../../../lib/worker-url";
 
 export async function POST(req: Request) {
-  // 1. Vérification de la session
   const session = await getServerSession(authOptions);
 
   if (!session?.accessToken) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  // 2. Récupération des paramètres
   const { repoName, branch } = await req.json();
 
   if (!repoName || !branch) {
     return NextResponse.json({ error: "repoName et branch sont requis." }, { status: 400 });
   }
 
-  // 3. Appel au worker Python — le token ne transite jamais par le client
+  // BFF : le corps client ne contient pas le token GitHub ; on l’ajoute ici pour limiter la surface XSS / fuite.
   const pythonRes = await fetch(`${getServerWorkerUrl()}/ingest`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -1,38 +1,72 @@
-# GraphRAG-Audit (AstroRAG) 🚀
+# GraphRAG Audit
 
-**Analyseur de Dette Technique Architecturale à Haute Fidélité**
+Connexion GitHub, choix d’un dépôt et d’une branche, analyse via un **service Python** (FastAPI), interface **Next.js**.
 
-Plateforme universelle d'intelligence logicielle utilisant un moteur GraphRAG hybride. Conçue pour démocratiser l'analyse de la dette technique, elle permet à tout développeur — du junior au lead architext — de visualiser la structure complexe de son code via une ingestion asynchrone sécurisée et une extraction déterministe d'AST.
+## Fonctionnement
 
-## 🏗️ Architecture du Système
+1. Le navigateur parle à **Next.js** (pages + `/api/...`).
+2. Next vérifie que l’utilisateur est connecté (NextAuth).
+3. Next appelle le **worker** avec l’URL `WORKER_URL` (côté serveur uniquement) et y met le **jeton GitHub** ; le navigateur ne l’envoie pas lui-même dans le JSON d’ingestion.
+4. Le worker clone le dépôt et fait l’analyse.
 
-Le projet repose sur 5 piliers architecturaux garantissant une scalabilité de niveau production :
+## Prérequis
 
-1. **API Gateway Asynchrone (FastAPI)** : Gestion des requêtes via la norme ASGI, validation stricte avec Pydantic et découplage total du plan d'exécution.
-2. **Plan d'Exécution Distribué (Celery & Redis)** : Orchestration des tâches lourdes (clonage, parsing) avec gestion de la contre-pression (*backpressure*) et politiques d'idempotence.
-3. **Analyseur Déterministe (Tree-sitter)** : Extraction haute performance de l'AST pour calculer la complexité cognitive et identifier les goulots d'étranglement structurels.
-4. **Moteur GraphRAG Hybride (Neo4j & pgvector)** : 
-   - **Topologie** : Relations de dépendances strictes dans Neo4j (`CALLS`, `INHERITS`).
-   - **Sémantique** : Embeddings vectoriels dans PostgreSQL pour la recherche floue.
-5. **Infrastructure & Conformité** : Isolation totale via Docker et design orienté vers la **Loi 25 (Québec)** pour la protection des données.
+- Node.js (voir `graph-rag-audit/package.json`)
+- Python 3.11+
+- App OAuth GitHub + variables dans `.env.local` (voir `.env.example`)
 
-## ✨ Le "Wow Factor" : DKB vs LLM-KB
+## Lancer le projet
 
-La plupart des implémentations GraphRAG délèguent l'extraction de graphes aux LLM, ce qui est coûteux et imprécis. 
-**AstroRAG** utilise une approche hybride :
-- **Extraction déterministe** via Tree-sitter (Couverture de 100% des fichiers, coût nul).
-- **Synthèse intelligente** via LLM uniquement pour la couche finale de réponse utilisateur.
+**Worker (terminal 1)**
 
-## 🛠️ Stack Technique
+```bash
+cd worker
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
 
-- **Backend** : Python 3.11+, FastAPI, Celery
-- **Frontend** : Next.js 14 (App Router), Tailwind CSS, React Flow (Visualisation)
-- **Bases de données** : Neo4j (Graphe), PostgreSQL + pgvector (Vecteurs), Redis (Broker)
-- **Infrastructure** : Docker, GitHub Actions (CI/CD)
+Doc API du worker : [http://localhost:8000/docs](http://localhost:8000/docs)
 
-## 🚀 Installation Rapide
+**Next (terminal 2)**
 
-1. **Cloner le projet**
-   ```bash
-   git clone [https://github.com/JohannSR28/graphrag-audit.git](https://github.com/JohannSR28/graphrag-audit.git)
-   cd graphrag-audit
+```bash
+cd graph-rag-audit
+copy .env.example .env.local
+npm install
+npm run dev
+```
+
+Site : [http://localhost:3000](http://localhost:3000)
+
+## Variables utiles
+
+| Fichier | Variable | Rôle |
+|---------|----------|------|
+| `graph-rag-audit/.env.local` | `WORKER_URL` | Adresse du worker (utilisée par le serveur Next, pas exposée au bundle client comme URL de polling direct) |
+| `graph-rag-audit/.env.local` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GITHUB_ID`, `GITHUB_SECRET` | Connexion GitHub |
+
+Détail : `graph-rag-audit/.env.example`.
+
+## API Next (ce que le front appelle)
+
+- **Endpoints détaillés** (méthodes, corps, codes, exemples) : [`docs/API-NEXT-BFF.md`](docs/API-NEXT-BFF.md)
+- Même chose pour outils : [`docs/openapi-next-bff.yaml`](docs/openapi-next-bff.yaml)
+- API du worker : [http://localhost:8000/docs](http://localhost:8000/docs)
+
+## Dossiers
+
+| Dossier | Contenu |
+|---------|---------|
+| `graph-rag-audit/` | App Next |
+| `worker/` | FastAPI + pipeline |
+| `docs/` | Doc API Next + YAML |
+
+## Si ça bloque
+
+| Problème | À vérifier |
+|----------|------------|
+| 401 sur l’ingestion | Connecté ? `NEXTAUTH_SECRET` défini ? |
+| Next ne joint pas le worker | `WORKER_URL` dans `.env.local`, worker démarré |
+| CORS | `worker/main.py` — `allow_origins` (surtout hors localhost) |

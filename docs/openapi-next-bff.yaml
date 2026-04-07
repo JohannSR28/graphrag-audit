@@ -1,0 +1,129 @@
+# Voir aussi docs/API-NEXT-BFF.md
+openapi: 3.0.3
+info:
+  title: GraphRAG Audit — API Next.js
+  version: 0.1.0
+  description: |
+    Routes `/api` de Next : session NextAuth obligatoire ; jeton GitHub vers le worker uniquement côté serveur (POST ingest).
+
+servers:
+  - url: http://localhost:3000
+    description: Développement local
+
+paths:
+  /api/ingest:
+    post:
+      tags:
+        - Ingestion
+      summary: Démarrer une ingestion
+      description: Envoie repoName + branch au worker ; token GitHub ajouté côté serveur Next.
+      operationId: postIngest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestBody"
+            examples:
+              default:
+                value:
+                  repoName: org/repository
+                  branch: main
+      responses:
+        "200":
+          description: Réponse du worker.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestWorkerResponse"
+        "400":
+          description: Corps invalide (champs requis manquants).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorJson"
+        "401":
+          description: Utilisateur non authentifié (pas de session valide).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorJson"
+        "502":
+          description: Worker injoignable ou erreur.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorJson"
+
+  /api/ingest/status/{jobId}:
+    get:
+      tags:
+        - Ingestion
+      summary: Statut d’un job d’ingestion
+      description: Relais vers le worker ; le client n’a pas besoin de l’URL du worker.
+      operationId: getIngestStatus
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant retourné par le worker (ex. `owner_repo_branch`).
+      responses:
+        "200":
+          description: Statut du job (JSON).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorJson"
+        "404":
+          description: Job inconnu côté worker.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorJson"
+
+components:
+  schemas:
+    IngestBody:
+      type: object
+      required:
+        - repoName
+        - branch
+      properties:
+        repoName:
+          type: string
+          description: Nom complet du dépôt GitHub (`owner/repo`).
+          example: facebook/react
+        branch:
+          type: string
+          description: Branche à cloner et analyser.
+          example: main
+
+    IngestWorkerResponse:
+      type: object
+      description: Réponse du worker (voir aussi /docs du worker).
+      additionalProperties: true
+      properties:
+        status:
+          type: string
+          example: accepted
+        job_id:
+          type: string
+        message:
+          type: string
+
+    ErrorJson:
+      type: object
+      properties:
+        error:
+          type: string
+        detail:
+          type: string
