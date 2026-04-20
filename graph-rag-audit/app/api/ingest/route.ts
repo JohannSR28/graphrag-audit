@@ -3,11 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { NextResponse } from "next/server";
 import { getServerWorkerUrl } from "../../../lib/worker-url";
+import { getGitHubAccessToken } from "../../../lib/github-access-token";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
+  const accessToken = await getGitHubAccessToken(req);
 
-  if (!session?.accessToken) {
+  if (!session || !accessToken) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
     body: JSON.stringify({
       repo_name: repoName,
       branch: branch,
-      github_access_token: session.accessToken, // Ajouté ici côté serveur
+      github_access_token: accessToken,
     }),
   });
 

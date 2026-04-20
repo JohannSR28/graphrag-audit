@@ -2,18 +2,20 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { NextResponse } from "next/server";
 import { getServerWorkerUrl } from "../../../../../lib/worker-url";
+import { getGitHubAccessToken } from "../../../../../lib/github-access-token";
 
 /**
  * Proxy GET vers le worker FastAPI : /status/{jobId}
  * Le navigateur n’a pas besoin de connaître l’URL du worker (WORKER_URL côté serveur uniquement).
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ jobId: string }> }
 ) {
   const session = await getServerSession(authOptions);
+  const accessToken = await getGitHubAccessToken(req);
 
-  if (!session?.accessToken) {
+  if (!session || !accessToken) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 

@@ -24,8 +24,11 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken;
-      session.providerId = token.providerId;
+      // Ne pas mettre accessToken sur session : il serait renvoyé par /api/auth/session (client).
+      // Le jeton reste uniquement dans le JWT ; côté serveur : getToken() ou getGitHubAccessToken().
+      if (session.user && token.sub) {
+        session.user.id = token.sub;
+      }
       return session;
     },
   },

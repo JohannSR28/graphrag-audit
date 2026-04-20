@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import RepoList from "../../components/dashboard/RepoList";
 import { authOptions } from "../api/auth/[...nextauth]/route";
+import { getGitHubAccessToken } from "../../lib/github-access-token";
 
 interface GitHubRepo {
   id: number;
@@ -30,7 +31,8 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const reposData = session.accessToken ? await getGitHubRepos(session.accessToken as string) : [];
+  const accessToken = await getGitHubAccessToken();
+  const reposData = accessToken ? await getGitHubRepos(accessToken) : [];
 
   /** Phase simplifiée : uniquement les dépôts publics. */
   const formattedRepos = reposData

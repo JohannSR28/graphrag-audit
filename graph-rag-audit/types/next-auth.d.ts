@@ -3,13 +3,10 @@ import { JWT } from "next-auth/jwt";
 
 declare module "next-auth" {
   /**
-   * Étend l'objet session renvoyé par useSession et getServerSession
+   * Session exposée au client (useSession) : pas de jeton GitHub.
    */
   interface Session {
-    accessToken?: string;
-    providerId?: string;
     user: {
-      /** L'id de l'utilisateur si besoin */
       id?: string;
     } & DefaultSession["user"];
   }
