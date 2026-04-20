@@ -1,18 +1,22 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import RepoList from "../../components/dashboard/RepoList";
-import { authOptions } from "../../app/api/auth/[...nextauth]/route";
+import { authOptions } from "../api/auth/[...nextauth]/route";
 
-/**
- * Récupère les dépôts GitHub de l'utilisateur.
- * On précise que le token est une string pour éviter les erreurs de type.
- */
-async function getGitHubRepos(token: string) {
-  const res = await fetch("https://api.github.com/user/repos?sort=updated&per_page=50", {
+interface GitHubRepo {
+  id: number;
+  full_name: string;
+  private: boolean;
+  default_branch: string;
+}
+
+async function getGitHubRepos(token: string): Promise<GitHubRepo[]> {
+  const res = await fetch("https://api.github.com/user/repos?sort=updated&per_page=100", {
     headers: {
       Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
     },
-    next: { revalidate: 60 },
+    cache: "no-store",
   });
 
   if (!res.ok) return [];
@@ -20,34 +24,26 @@ async function getGitHubRepos(token: string) {
 }
 
 export default async function DashboardPage() {
-  // 1. Récupération de la session
   const session = await getServerSession(authOptions);
 
-  // 2. Sécurité : Si l'utilisateur n'est pas connecté, redirect
   if (!session) {
     redirect("/");
   }
 
-  // 3. Appel à l'API GitHub
-  // Plus besoin de @ts-ignore : session.accessToken est reconnu !
-  // On s'assure qu'on a bien un token avant d'appeler la fonction
-  const reposData = session.accessToken 
-    ? await getGitHubRepos(session.accessToken) 
-    : [];
+  const reposData = session.accessToken ? await getGitHubRepos(session.accessToken as string) : [];
 
-  // 4. Transformation des données avec un typage léger
-  const formattedRepos = reposData.map((repo: any) => ({
-    id: repo.id.toString(),
-    name: repo.full_name,
-    visibility: repo.private ? "private" : "public",
-    status: "new", 
-    defaultBranch: repo.default_branch,
-    branches: [repo.default_branch], 
-  }));
+  /** Phase simplifiée : uniquement les dépôts publics. */
+  const formattedRepos = reposData
+    .filter((repo) => !repo.private)
+    .map((repo) => ({
+      id: repo.id.toString(),
+      name: repo.full_name,
+      defaultBranch: repo.default_branch,
+    }));
 
   return (
     <main>
-      <RepoList repos={formattedRepos} accessToken={session.accessToken as string} />
+      <RepoList repos={formattedRepos} />
     </main>
   );
 }

@@ -1,16 +1,9 @@
-export type RepoVisibility = "public" | "private";
-export type RepoStatus = "cached" | "syncing" | "new";
-
+/** Dépôt affiché dans le hub (phase simplifiée : publics uniquement). */
 export interface Repo {
   id: string;
   name: string;
-  visibility: RepoVisibility;
-  status: RepoStatus;
-  lastCommitHash?: string;
-  branches: string[];
   defaultBranch: string;
 }
-
 
 export interface IngestionStep {
   id: number;

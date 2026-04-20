@@ -3,19 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { IngestJobStats } from "../../lib/ingest-types";
-import { markRepoAnalysisCompleted } from "../../lib/repo-audit-storage";
-
-const INGESTION_LEAVE_MESSAGE =
-  "Analyse en cours : quitter cette page coupe le suivi en direct et peut empêcher d'afficher le résultat ici.\n\nQuitter quand même ?";
 
 interface TelemetryTerminalProps {
-  repoId: string;
   repoName: string;
   branch: string;
-  auditId: string;
 }
 
-// On remplace "cloning" par "running" pour être plus générique
 type Status = "idle" | "running" | "done" | "error";
 
 interface LogLine {
@@ -28,12 +21,7 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export default function TelemetryTerminal({
-  repoId,
-  repoName,
-  branch,
-  auditId,
-}: TelemetryTerminalProps) {
+export default function TelemetryTerminal({ repoName, branch }: TelemetryTerminalProps) {
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [jobId, setJobId] = useState<string | null>(null);
@@ -41,12 +29,8 @@ export default function TelemetryTerminal({
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  
-  // 💡 NOUVEAU : On garde en mémoire la dernière étape affichée pour ne pas spammer le terminal
   const lastStepRef = useRef<string | null>(null);
-  const historyTrapPushedRef = useRef(false);
-  const leaveGuardRef = useRef(false);
-  
+
   const router = useRouter();
 
   const push = (text: string, type: LogLine["type"] = "info") =>
@@ -56,71 +40,9 @@ export default function TelemetryTerminal({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  /** Bloquer tant que le job n'est pas terminé (idle = tout début avant fin / erreur). */
-  const leaveGuardActive = status === "running" || status === "idle";
-  leaveGuardRef.current = leaveGuardActive;
-
-  useEffect(() => {
-    if (!leaveGuardActive) {
-      historyTrapPushedRef.current = false;
-      return;
-    }
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [leaveGuardActive]);
-
-  useEffect(() => {
-    if (!leaveGuardActive) return;
-    const onClickCapture = (e: MouseEvent) => {
-      if (e.defaultPrevented || e.button !== 0) return;
-      const el = e.target as HTMLElement | null;
-      const a = el?.closest?.("a[href]") as HTMLAnchorElement | null;
-      if (!a?.href) return;
-      if (a.target === "_blank" || a.hasAttribute("download")) return;
-      try {
-        const url = new URL(a.href, window.location.origin);
-        if (url.origin !== window.location.origin) return;
-        const here = `${window.location.pathname}${window.location.search}`;
-        const there = `${url.pathname}${url.search}`;
-        if (there === here) return;
-        if (!window.confirm(INGESTION_LEAVE_MESSAGE)) e.preventDefault();
-      } catch {
-        /* ignore invalid href */
-      }
-    };
-    document.addEventListener("click", onClickCapture, true);
-    return () => document.removeEventListener("click", onClickCapture, true);
-  }, [leaveGuardActive]);
-
-  /** Bouton Retour : entrée historique dupliquée + popstate → confirm. */
-  useEffect(() => {
-    if (!leaveGuardActive) return;
-    if (!historyTrapPushedRef.current) {
-      window.history.pushState({ __ingestionGuard: 1 }, "", window.location.href);
-      historyTrapPushedRef.current = true;
-    }
-    const onPopState = () => {
-      if (!leaveGuardRef.current) return;
-      const ok = window.confirm(INGESTION_LEAVE_MESSAGE);
-      if (!ok) {
-        window.history.pushState({ __ingestionGuard: 1 }, "", window.location.href);
-      } else {
-        historyTrapPushedRef.current = false;
-        window.history.back();
-      }
-    };
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [leaveGuardActive]);
-
   useEffect(() => {
     const run = async () => {
       setStatus("running");
-      push(`> SESSION   ${auditId}`);
       push(`> CIBLE     ${repoName}`);
       push(`> BRANCHE   ${branch}`);
       push(`> ────────────────────────────`);
@@ -178,15 +100,13 @@ export default function TelemetryTerminal({
         }
 
         if (data.status === "running") {
-          // Si l'étape a changé depuis la dernière vérification (ex: passe de "cloning" à "parsing_ast")
           if (data.current_step && data.current_step !== lastStepRef.current) {
             push(`> [${data.current_step.toUpperCase()}] ${data.message}`, "info");
-            lastStepRef.current = data.current_step; // On met à jour la mémoire
+            lastStepRef.current = data.current_step;
           }
-        } 
-        else if (data.status === "done") {
+        } else if (data.status === "done") {
           push(`> [COMPLETED] Pipeline d'analyse terminé avec succès.`, "success");
-          
+
           if (data.stats) {
             setResultStats(data.stats as IngestJobStats);
             const s = data.stats as IngestJobStats;
@@ -198,12 +118,10 @@ export default function TelemetryTerminal({
               "success"
             );
           }
-          
+
           setStatus("done");
-          markRepoAnalysisCompleted(repoId);
           clearInterval(pollingRef.current!);
-        } 
-        else if (data.status === "error") {
+        } else if (data.status === "error") {
           push(`> Échec de l'opération : ${data.error}`, "error");
           setStatus("error");
           clearInterval(pollingRef.current!);
@@ -243,7 +161,7 @@ export default function TelemetryTerminal({
         <span className="text-[10px] uppercase tracking-widest text-[var(--muted-dark)]">
           worker — {repoName}
         </span>
-        <span className={`text-[10px] uppercase font-bold ${statusColor}`}>
+        <span className={`text-[10px] font-bold uppercase ${statusColor}`}>
           {status === "running" && (
             <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current align-middle" />
           )}
@@ -259,10 +177,10 @@ export default function TelemetryTerminal({
               log.type === "success"
                 ? "text-[var(--success)]"
                 : log.type === "error"
-                ? "text-red-400"
-                : log.type === "warn"
-                ? "text-[var(--warning)]"
-                : "text-[var(--muted)]"
+                  ? "text-red-400"
+                  : log.type === "warn"
+                    ? "text-[var(--warning)]"
+                    : "text-[var(--muted)]"
             }`}
           >
             {log.text}
@@ -296,11 +214,11 @@ export default function TelemetryTerminal({
                   q.set("edges", String(resultStats.total_edges));
                   q.set("loc", String(resultStats.total_lines_of_code ?? 0));
                 }
-                router.push(`/audit/${auditId}?${q.toString()}`);
+                router.push(`/audit?${q.toString()}`);
               }}
               className="rounded border border-[var(--violet-light)] px-4 py-1.5 text-xs uppercase text-[var(--violet-light)] transition hover:bg-[var(--violet-light)] hover:text-black"
             >
-              Ouvrir l&apos;Audit →
+              Ouvrir l&apos;audit (MD) →
             </button>
           )}
         </div>

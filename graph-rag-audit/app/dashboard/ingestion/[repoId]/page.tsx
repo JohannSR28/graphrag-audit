@@ -6,8 +6,7 @@ interface PageProps {
   searchParams: Promise<{ branch?: string; name?: string }>;
 }
 
-export default async function IngestionPage({ params, searchParams }: PageProps) {
-  const { repoId } = await params;
+export default async function IngestionPage({ searchParams }: PageProps) {
   const { branch: branchParam, name: nameParam } = await searchParams;
 
   // Formatage du nom : "facebook/react" -> "facebook / react"
@@ -15,7 +14,6 @@ export default async function IngestionPage({ params, searchParams }: PageProps)
   const [owner, repoName] = rawName.includes("/") ? rawName.split("/") : ["", rawName];
 
   const branch = branchParam ?? "main";
-  const auditId = "req_" + Math.random().toString(36).slice(2, 11);
 
   return (
     <main className="p-8">
@@ -39,12 +37,7 @@ export default async function IngestionPage({ params, searchParams }: PageProps)
         </div>
       </div>
 
-      <TelemetryTerminal
-        repoId={repoId}
-        repoName={rawName}
-        branch={branch}
-        auditId={auditId}
-      />
+      <TelemetryTerminal repoName={rawName} branch={branch} />
     </main>
   );
 }
