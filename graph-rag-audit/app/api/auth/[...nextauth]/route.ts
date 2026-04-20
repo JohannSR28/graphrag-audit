@@ -3,12 +3,16 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 
 export const authOptions: NextAuthOptions = {
+  // Requis pour signer les cookies JWT ; sans ça, sessions faibles en prod.
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GithubProvider({
       id: "github",
       name: "GitHub",
       clientId: process.env.GITHUB_ID as string,
       clientSecret: process.env.GITHUB_SECRET as string,
+      // GitHub renvoie `iss` sur le callback ; openid-client exige un issuer explicite.
+      issuer: "https://github.com/login/oauth",
       authorization: { params: { scope: "read:user user:email public_repo" } },
     }),
     GithubProvider({
@@ -16,11 +20,12 @@ export const authOptions: NextAuthOptions = {
       name: "GitHub (Privé)",
       clientId: process.env.GITHUB_ID as string,
       clientSecret: process.env.GITHUB_SECRET as string,
-      authorization: { 
-        params: { 
+      issuer: "https://github.com/login/oauth",
+      authorization: {
+        params: {
           scope: "read:user user:email repo",
-          redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/callback/github`, // ← même callback que le provider principal
-        } 
+          redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/callback/github`,
+        },
       },
     }),
   ],
